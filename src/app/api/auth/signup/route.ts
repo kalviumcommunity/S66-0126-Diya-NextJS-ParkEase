@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { successResponse, errorResponse } from '@/lib/apiResponse';
 import { signupSchema } from '@/lib/validations/auth';
 import { prisma } from '@/lib/prisma';
+import { sendEmail, getWelcomeEmailHtml } from '@/lib/email';
 import bcrypt from 'bcryptjs';
 import { withErrorHandler } from '@/lib/errorHandler';
 
@@ -58,6 +59,16 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
       createdAt: true,
     },
   });
+
+  // Send welcome email (fire and forget - don't block on email)
+  try {
+    const welcomeHtml = getWelcomeEmailHtml(user.name, user.email);
+    await sendEmail(user.email, 'Welcome to ParkEase!', welcomeHtml);
+    console.log(`Welcome email sent to ${user.email}`);
+  } catch (error) {
+    console.error(`Failed to send welcome email to ${user.email}:`, error);
+    // Don't fail the signup if email fails - user is already created
+  }
 
   return successResponse(
     {

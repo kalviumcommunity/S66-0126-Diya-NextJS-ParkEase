@@ -3,6 +3,8 @@ import { successResponse, errorResponse } from '@/lib/apiResponse';
 import { bookParkingSlot, isSlotAvailable } from '@/lib/bookingService';
 import { createBookingSchema } from '@/lib/validations/booking';
 import { invalidateCachePattern } from '@/lib/redis';
+import { sendEmail, getBookingConfirmationEmailHtml } from '@/lib/email';
+import { prisma } from '@/lib/prisma';
 
 /**
  * POST /api/bookings - Create a new booking
@@ -47,6 +49,33 @@ export async function POST(request: NextRequest) {
 
     // Invalidate slots cache after booking creation
     await invalidateCachePattern('slots:*');
+
+    // Send booking confirmation email (fire and forget - don't block on email)
+    try {
+      const booking = result.booking;
+      const slot = result.slot;
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { email: true, name: true },
+      });
+
+      if (user && booking && slot) {
+        const confirmationHtml = getBookingConfirmationEmailHtml(user.name, {
+          bookingId: booking.id,
+          slotLocation: 'Parking Location', // Could be enhanced with actual location data
+          row: slot.row,
+          column: slot.column,
+          startTime: booking.startTime.toISOString(),
+          endTime: booking.endTime.toISOString(),
+        });
+
+        await sendEmail(user.email, 'Booking Confirmation', confirmationHtml);
+        console.log(`Booking confirmation email sent to ${user.email}`);
+      }
+    } catch (error) {
+      console.error('Failed to send booking confirmation email:', error);
+      // Don't fail the booking if email fails - booking is already created
+    }
 
     return successResponse(result, 201);
   } catch (error) {
