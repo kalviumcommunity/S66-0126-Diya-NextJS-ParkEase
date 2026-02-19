@@ -1,34 +1,18 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
+import { useAuth } from '@/context/AuthContext';
 
 export default function ProtectedLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const [isLoading, setIsLoading] = useState(true);
+  const { user, isLoading } = useAuth();
 
   useEffect(() => {
-    const token = localStorage.getItem('accessToken');
-    if (!token) {
+    if (!isLoading && !user) {
       router.push('/auth/login');
-      return;
     }
-
-    try {
-      const payload = JSON.parse(atob(token.split('.')[1]));
-      if (payload?.exp && Date.now() >= payload.exp * 1000) {
-        localStorage.removeItem('accessToken');
-        router.push('/auth/login');
-        return;
-      }
-    } catch {
-      localStorage.removeItem('accessToken');
-      router.push('/auth/login');
-      return;
-    }
-
-    setIsLoading(false);
-  }, [router]);
+  }, [isLoading, user, router]);
 
   if (isLoading) {
     return (

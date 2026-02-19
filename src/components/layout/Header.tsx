@@ -3,39 +3,12 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
-
-interface UserInfo {
-  email?: string;
-  role?: string;
-}
+import { useAuth } from '@/context/AuthContext';
 
 export default function Header() {
   const pathname = usePathname();
-  const [user, setUser] = useState<UserInfo | null>(null);
+  const { user, logout } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-
-  useEffect(() => {
-    const token = localStorage.getItem('accessToken');
-    if (!token) {
-      setUser(null);
-      return;
-    }
-
-    try {
-      const payload = JSON.parse(atob(token.split('.')[1]));
-      if (payload?.exp && Date.now() >= payload.exp * 1000) {
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-        setUser(null);
-        return;
-      }
-      setUser(payload);
-    } catch {
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('refreshToken');
-      setUser(null);
-    }
-  }, [pathname]);
 
   useEffect(() => {
     setIsMenuOpen(false);
@@ -77,7 +50,16 @@ export default function Header() {
 
             <div className="flex items-center gap-3 pl-6 border-l border-gray-200">
               {user?.email ? (
-                <span className="text-sm text-gray-600">{user.email}</span>
+                <>
+                  <span className="text-sm text-gray-600">{user.email}</span>
+                  <button
+                    type="button"
+                    onClick={logout}
+                    className="text-sm font-medium text-red-600 hover:text-red-700"
+                  >
+                    Logout
+                  </button>
+                </>
               ) : (
                 <>
                   <Link
@@ -146,7 +128,16 @@ export default function Header() {
 
             <div className="pt-3 border-t border-gray-100">
               {user?.email ? (
-                <span className="block text-sm text-gray-600">Signed in as {user.email}</span>
+                <div className="flex items-center justify-between">
+                  <span className="block text-sm text-gray-600">Signed in as {user.email}</span>
+                  <button
+                    type="button"
+                    onClick={logout}
+                    className="text-sm font-medium text-red-600"
+                  >
+                    Logout
+                  </button>
+                </div>
               ) : (
                 <div className="flex items-center gap-4">
                   <Link href="/auth/login" className="text-sm font-medium text-gray-600">
