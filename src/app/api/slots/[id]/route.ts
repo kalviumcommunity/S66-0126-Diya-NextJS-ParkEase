@@ -8,9 +8,9 @@ import { successResponse, errorResponse } from '@/lib/apiResponse';
  * Path parameters:
  * - id: Slot ID (UUID)
  */
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const slotId = params.id;
+    const { id: slotId } = await params;
 
     if (!slotId) {
       return errorResponse('Slot ID is required', 400, 'MISSING_PARAM');

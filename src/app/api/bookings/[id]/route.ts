@@ -12,9 +12,12 @@ import { successResponse, errorResponse } from '@/lib/apiResponse';
  * - Requires JWT token
  * - User can only cancel their own bookings (unless admin)
  */
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
-    const bookingId = params.id;
+    const { id: bookingId } = await params;
 
     if (!bookingId) {
       return errorResponse('Booking ID is required', 400, 'MISSING_PARAM');
