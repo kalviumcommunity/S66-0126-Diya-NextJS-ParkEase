@@ -5,8 +5,8 @@ import { useEffect, useMemo, useState, use } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { toast } from 'sonner';
 import { useAuth } from '@/context/AuthContext';
+import { useToast } from '@/context/ToastContext';
 
 interface Slot {
   id: string;
@@ -32,6 +32,7 @@ export default function SlotDetailsPage({ params }: { params: Promise<{ id: stri
   const { id } = use(params);
   const router = useRouter();
   const { token } = useAuth();
+  const { success, error: toastError } = useToast();
   const [slot, setSlot] = useState<Slot | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -104,7 +105,7 @@ export default function SlotDetailsPage({ params }: { params: Promise<{ id: stri
 
   const onSubmit = async (values: BookingFormValues) => {
     if (!token) {
-      toast.error('Please log in to book a slot.');
+      toastError('Please log in to book a slot.');
       router.push('/auth/login');
       return;
     }
@@ -130,10 +131,10 @@ export default function SlotDetailsPage({ params }: { params: Promise<{ id: stri
         throw new Error(data.error?.message || 'Failed to create booking');
       }
 
-      toast.success('Booking created successfully!');
+      success('Booking created successfully!');
       router.push('/bookings');
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to create booking');
+      toastError(err instanceof Error ? err.message : 'Failed to create booking');
     }
   };
 

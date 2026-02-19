@@ -4,10 +4,12 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
+import { useToast } from '@/context/ToastContext';
 
 export default function SignupPage() {
   const router = useRouter();
   const { signup } = useAuth();
+  const { success, error: toastError } = useToast();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -38,9 +40,12 @@ export default function SignupPage() {
 
     try {
       await signup(email, password, name);
+      success('Account created successfully.');
       router.push('/map');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
+      const message = err instanceof Error ? err.message : 'An error occurred';
+      setError(message);
+      toastError(message);
     } finally {
       setIsLoading(false);
     }

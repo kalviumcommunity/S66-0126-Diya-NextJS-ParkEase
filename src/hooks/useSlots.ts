@@ -18,7 +18,7 @@ export function useSlots() {
   const fetcher = useAuthFetcher();
   const { data, error, isLoading, mutate } = useSWR(token ? '/api/slots' : null, fetcher, {
     revalidateOnFocus: true,
-    dedupingInterval: 15000,
+    dedupingInterval: 3000, // Reduced from 15000 to allow faster updates after mutations
     keepPreviousData: true,
   });
 

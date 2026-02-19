@@ -1,7 +1,7 @@
-import { NextRequest } from 'next/server';
 import { successResponse, errorResponse } from '@/lib/apiResponse';
 import { authenticate, AuthenticatedRequest } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { invalidateCachePattern } from '@/lib/redis';
 
 /**
  * GET /api/bookings/[id]
@@ -74,34 +74,71 @@ export const GET = authenticate(
  * - Requires JWT token
  * - User can only cancel their own bookings (unless admin)
  */
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const { id: bookingId } = await params;
+export const DELETE = authenticate(
+  async (request: AuthenticatedRequest, context?: { params: Promise<{ id: string }> }) => {
+    try {
+      const params = await context?.params;
+      const bookingId = params?.id;
 
-    if (!bookingId) {
-      return errorResponse('Booking ID is required', 400, 'MISSING_PARAM');
+      if (!bookingId) {
+        return errorResponse('Booking ID is required', 400, 'MISSING_PARAM');
+      }
+
+      const user = request.user;
+      if (!user) {
+        return errorResponse('Unauthorized', 401, 'UNAUTHORIZED');
+      }
+
+      const booking = await prisma.booking.findUnique({
+        where: { id: bookingId },
+      });
+
+      if (!booking) {
+        return errorResponse('Booking not found', 404, 'BOOKING_NOT_FOUND');
+      }
+
+      if (user.role !== 'ADMIN' && booking.userId !== user.userId) {
+        return errorResponse('Forbidden', 403, 'FORBIDDEN');
+      }
+
+      if (booking.status === 'CANCELLED') {
+        return successResponse(
+          {
+            bookingId: booking.id,
+            status: booking.status,
+            message: 'Booking already cancelled',
+          },
+          200
+        );
+      }
+
+      const updated = await prisma.$transaction(async (tx) => {
+        const cancelled = await tx.booking.update({
+          where: { id: bookingId },
+          data: { status: 'CANCELLED' },
+        });
+
+        await tx.parkingSlot.update({
+          where: { id: cancelled.slotId },
+          data: { status: 'AVAILABLE' },
+        });
+
+        return cancelled;
+      });
+
+      await invalidateCachePattern('slots:*');
+
+      return successResponse(
+        {
+          bookingId: updated.id,
+          status: updated.status,
+          message: 'Booking cancelled successfully',
+        },
+        200
+      );
+    } catch (error) {
+      console.error('Cancel booking error:', error);
+      return errorResponse('Internal server error', 500);
     }
-
-    // TODO: Implement booking cancellation logic
-    // - Verify authentication and get user info from JWT
-    // - Check if booking exists
-    // - Verify user owns the booking (or is admin)
-    // - Call cancelBooking service from bookingService.ts
-    // - Return success response
-
-    return successResponse(
-      {
-        bookingId,
-        status: 'CANCELED',
-        message: 'TODO: Implement booking cancellation with authorization',
-      },
-      200
-    );
-  } catch (error) {
-    console.error('Cancel booking error:', error);
-    return errorResponse('Internal server error', 500);
   }
-}
+);

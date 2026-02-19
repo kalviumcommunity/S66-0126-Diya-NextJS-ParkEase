@@ -1,9 +1,18 @@
 'use client';
 
+import { useState } from 'react';
 import { useBookings } from '@/hooks/useBookings';
+import { mutate as globalMutate } from 'swr';
+import { useAuth } from '@/context/AuthContext';
+import { useToast } from '@/context/ToastContext';
+import Modal from '@/components/ui/Modal';
 
 export default function BookingsPage() {
-  const { bookings, isLoading, error } = useBookings();
+  const { bookings, isLoading, error, mutate } = useBookings();
+  const { token } = useAuth();
+  const { success, error: toastError } = useToast();
+  const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null);
+  const [isCancelling, setIsCancelling] = useState(false);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -20,6 +29,45 @@ export default function BookingsPage() {
 
   const formatDateTime = (dateString: string) => {
     return new Date(dateString).toLocaleString();
+  };
+
+  const canCancel = (status: string) =>
+    status === 'PENDING' || status === 'CONFIRMED' || status === 'ACTIVE';
+
+  const handleCancelBooking = async () => {
+    if (!selectedBookingId) return;
+    if (!token) {
+      toastError('Please log in to cancel a booking.');
+      return;
+    }
+    setIsCancelling(true);
+    try {
+      const response = await fetch(`/api/bookings/${selectedBookingId}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        if (response.status === 401) {
+          toastError('Session expired. Please log in again.');
+          return;
+        }
+        throw new Error(data.error?.message || 'Failed to cancel booking');
+      }
+
+      success('Booking cancelled successfully.');
+      setSelectedBookingId(null);
+      mutate();
+      // Force immediate refetch of slots by setting revalidate: true
+      globalMutate('/api/slots', undefined, { revalidate: true });
+    } catch (err) {
+      toastError(err instanceof Error ? err.message : 'Failed to cancel booking');
+    } finally {
+      setIsCancelling(false);
+    }
   };
 
   if (isLoading) {
@@ -122,6 +170,17 @@ export default function BookingsPage() {
                         {booking.status}
                       </span>
                     </div>
+                    {canCancel(booking.status) && (
+                      <div className="mb-4">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedBookingId(booking.id)}
+                          className="text-sm font-medium text-red-600 hover:text-red-700"
+                        >
+                          Cancel Booking
+                        </button>
+                      </div>
+                    )}
                     <div className="mb-4">
                       <p className="text-gray-600 text-sm">Total Price</p>
                       <p className="text-3xl font-bold text-gray-900">
@@ -146,6 +205,32 @@ export default function BookingsPage() {
           }
         })}
       </div>
+      <Modal
+        isOpen={!!selectedBookingId}
+        title="Cancel booking?"
+        onClose={() => setSelectedBookingId(null)}
+        footer={
+          <>
+            <button
+              type="button"
+              onClick={() => setSelectedBookingId(null)}
+              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition"
+            >
+              Keep Booking
+            </button>
+            <button
+              type="button"
+              onClick={handleCancelBooking}
+              disabled={isCancelling}
+              className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition disabled:bg-gray-400"
+            >
+              {isCancelling ? 'Cancelling...' : 'Cancel Booking'}
+            </button>
+          </>
+        }
+      >
+        <p>Are you sure you want to cancel this booking? This action cannot be undone.</p>
+      </Modal>
     </div>
   );
 }

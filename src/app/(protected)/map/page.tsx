@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useSlots } from '@/hooks/useSlots';
+import { useSlots, type ParkingSlot } from '@/hooks/useSlots';
 
 export default function MapPage() {
   const { slots, isLoading, error } = useSlots();
@@ -24,6 +24,15 @@ export default function MapPage() {
         <p className="text-red-700">
           {error instanceof Error ? error.message : 'An error occurred'}
         </p>
+      </div>
+    );
+  }
+
+  if (slots.length === 0) {
+    return (
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-8 text-center">
+        <h2 className="text-2xl font-bold text-blue-900 mb-2">No Parking Spaces Found</h2>
+        <p className="text-blue-700">Please check back later.</p>
       </div>
     );
   }
