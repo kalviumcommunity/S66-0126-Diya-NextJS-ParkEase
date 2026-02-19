@@ -1,0 +1,45 @@
+# Code Owners File
+# https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# These owners will be requested for review whenever someone opens a pull request.
+
+# Global default owner (if no other rule matches)
+* @owner
+
+# Authentication and Security
+/src/lib/auth.ts @owner
+/src/lib/env.ts @owner
+/.env.example @owner
+/.env.local @owner
+
+# Database and ORM
+/src/lib/db.ts @owner
+/prisma/ @owner
+
+# API Routes
+/src/app/api/ @owner
+
+# Type Definitions
+/src/types/ @owner
+
+# Configuration Files
+/tsconfig.json @owner
+/.eslintrc.json @owner
+/.prettierrc @owner
+/next.config.ts @owner
+/package.json @owner
+
+# Deployment and CI/CD
+/.github/ @owner
+/Dockerfile @owner
+
+# Documentation
+/README.md @owner
+/*.md @owner
+
+# Tests (when added)
+/__tests__/ @owner
+/*.test.ts @owner
+/*.test.tsx @owner
+
+# Refer to CONTRIBUTING.md for branching strategy and PR process

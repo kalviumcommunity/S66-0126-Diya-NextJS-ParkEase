@@ -333,8 +333,48 @@ npm run format
 
 - Check [PROJECT_CONTEXT.md](../PROJECT_CONTEXT.md) for architecture questions
 - Review [CODE_QUALITY.md](./CODE_QUALITY.md) for linting/formatting issues
+- Review [CONTRIBUTING.md](./CONTRIBUTING.md) for GitHub workflow and branching
 - Check Next.js docs: https://nextjs.org/docs
 - TypeScript docs: https://www.typescriptlang.org/docs
+
+## GitHub Workflow
+
+### Branch Protection Rules
+The `main` branch is protected with:
+- ✓ Required pull request reviews (1 approval)
+- ✓ Required status checks (build, lint, type-check, format)
+- ✓ Linear history enforcement
+- ✓ Automatic tests on all PRs
+
+See [`.github/BRANCH_PROTECTION.md`](./.github/BRANCH_PROTECTION.md) for setup instructions.
+
+### Pull Request Process
+1. Create feature branch: `git checkout -b feature/your-feature`
+2. Commit with conventional commits: `feat: add new feature`
+3. Push and create PR using [`.github/PULL_REQUEST_TEMPLATE.md`](./.github/PULL_REQUEST_TEMPLATE.md)
+4. Automated checks run via GitHub Actions
+5. Request review from code owners
+6. Merge when approved and all checks pass
+
+See [**CONTRIBUTING.md**](./CONTRIBUTING.md) for detailed guidelines.
+
+### CI/CD Pipeline
+GitHub Actions runs on every PR and push to `main`:
+- **build**: `npm run build`
+- **lint**: `npm run lint`
+- **type-check**: `npm run type-check`
+- **format**: `npm run format:check`
+
+View workflows in [`.github/workflows/`](./.github/workflows/)
+
+## Documentation
+
+- [**PROJECT_CONTEXT.md**](./PROJECT_CONTEXT.md) - Architecture, features, API specs, database schema
+- [**CONTRIBUTING.md**](./CONTRIBUTING.md) - Git workflow, branch naming, commit guidelines
+- [**ENV_SETUP.md**](./ENV_SETUP.md) - Comprehensive environment variable setup guide
+- [**ENV_QUICK_REFERENCE.md**](./ENV_QUICK_REFERENCE.md) - Quick environment variable reference
+- [**CODE_QUALITY.md**](./CODE_QUALITY.md) - TypeScript, ESLint, Prettier, Husky configuration
+- [**FOLDER_STRUCTURE.md**](./FOLDER_STRUCTURE.md) - Project directory organization
 
 ## License
 
