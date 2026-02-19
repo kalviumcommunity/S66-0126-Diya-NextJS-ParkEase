@@ -3,7 +3,6 @@ import type { NextConfig } from 'next';
 const nextConfig: NextConfig = {
   /* Core Configuration */
   reactStrictMode: true,
-  swcMinify: true,
 
   /* Environment Variables - Only NEXT_PUBLIC_* are exposed to client */
   env: {
@@ -19,7 +18,6 @@ const nextConfig: NextConfig = {
     EMAIL_PROVIDER: process.env.EMAIL_PROVIDER,
     SENDGRID_API_KEY: process.env.SENDGRID_API_KEY,
     LOG_LEVEL: process.env.LOG_LEVEL,
-    NODE_ENV: process.env.NODE_ENV,
   },
 
   /* Headers for Security */
@@ -49,33 +47,18 @@ const nextConfig: NextConfig = {
     ];
   },
 
-  /* HTTPS Redirect in Production */
-  redirects: async () => {
-    return [
-      {
-        source: '/:path*',
-        destination: '/:path*',
-        permanent: false,
-      },
-    ];
-  },
-
-  /* Webpack Configuration */
-  webpack: (config, { isServer }) => {
-    if (!isServer) {
-      config.optimization = {
-        ...config.optimization,
-        usedExports: true,
-      };
-    }
-    return config;
-  },
-
   /* Image Optimization */
   images: {
-    domains: ['localhost'],
-    // Add S3 bucket domain when configured
-    // domains: [process.env.AWS_S3_BUCKET],
+    remotePatterns: [
+      {
+        protocol: 'http',
+        hostname: 'localhost',
+      },
+      {
+        protocol: 'https',
+        hostname: '*.amazonaws.com',
+      },
+    ],
   },
 
   /* TypeScript */
