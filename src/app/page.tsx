@@ -28,49 +28,6 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-blue-600 to-blue-800">
-      <nav className="bg-white shadow-md">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center h-16">
-          <div className="text-2xl font-bold text-blue-600">ParkEase</div>
-          <div className="flex gap-4">
-            {isLoggedIn ? (
-              <>
-                <Link href="/map" className="text-gray-600 hover:text-blue-600 font-medium">
-                  Parking Map
-                </Link>
-                <Link href="/bookings" className="text-gray-600 hover:text-blue-600 font-medium">
-                  My Bookings
-                </Link>
-                <button
-                  onClick={() => {
-                    localStorage.removeItem('accessToken');
-                    localStorage.removeItem('refreshToken');
-                    setIsLoggedIn(false);
-                  }}
-                  className="text-gray-600 hover:text-red-600 font-medium"
-                >
-                  Logout
-                </button>
-              </>
-            ) : (
-              <>
-                <button
-                  onClick={() => router.push('/auth/login')}
-                  className="text-gray-600 hover:text-blue-600 font-medium"
-                >
-                  Login
-                </button>
-                <button
-                  onClick={() => router.push('/auth/signup')}
-                  className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
-                >
-                  Sign Up
-                </button>
-              </>
-            )}
-          </div>
-        </div>
-      </nav>
-
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-white">
         <div className="grid md:grid-cols-2 gap-12 items-center">
           <div>
