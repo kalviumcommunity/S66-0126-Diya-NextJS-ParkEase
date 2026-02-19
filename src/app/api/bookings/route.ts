@@ -5,6 +5,7 @@ import { createBookingSchema } from '@/lib/validations/booking';
 import { invalidateCachePattern } from '@/lib/redis';
 import { sendEmail, getBookingConfirmationEmailHtml } from '@/lib/email';
 import { prisma } from '@/lib/prisma';
+import { authenticate, AuthenticatedRequest } from '@/lib/auth';
 
 /**
  * POST /api/bookings - Create a new booking
@@ -90,62 +91,89 @@ export async function POST(request: NextRequest) {
  * 1. Get user's bookings: GET /api/bookings?userId=xxx (requires auth)
  * 2. Check availability: GET /api/bookings?slotId=xxx&startTime=xxx&endTime=xxx
  */
-export async function GET(request: NextRequest) {
-  try {
-    const searchParams = request.nextUrl.searchParams;
-    const userId = searchParams.get('userId');
-    const slotId = searchParams.get('slotId');
-    const startTime = searchParams.get('startTime');
-    const endTime = searchParams.get('endTime');
+export async function GET(request: AuthenticatedRequest) {
+  return authenticate(async (authRequest: AuthenticatedRequest) => {
+    try {
+      const searchParams = authRequest.nextUrl.searchParams;
+      const slotId = searchParams.get('slotId');
+      const startTime = searchParams.get('startTime');
+      const endTime = searchParams.get('endTime');
 
-    // Mode 1: Get user's bookings
-    if (userId && !slotId) {
-      // TODO: Implement get user bookings logic
-      // - Verify authentication and ensure userId matches current user (or is admin)
-      // - Query all bookings for the user
-      // - Filter by status if needed
-      // - Return paginated list of user's bookings
+      // Get user's bookings (default behavior without params)
+      const user = (authRequest as AuthenticatedRequest).user;
+      if (!user) {
+        return errorResponse('Unauthorized', 401, 'UNAUTHORIZED');
+      }
+
+      // If no slot parameters provided, fetch user's bookings
+      if (!slotId) {
+        const bookings = await prisma.booking.findMany({
+          where: {
+            userId: user.userId,
+          },
+          include: {
+            slot: {
+              select: {
+                id: true,
+                row: true,
+                column: true,
+                status: true,
+              },
+            },
+          },
+          orderBy: {
+            createdAt: 'desc',
+          },
+        });
+
+        return successResponse(
+          {
+            items: bookings.map((b) => ({
+              id: b.id,
+              slotId: b.slotId,
+              slot: b.slot,
+              startTime: b.startTime.toISOString(),
+              endTime: b.endTime.toISOString(),
+              status: b.status,
+              totalPrice: b.totalPrice,
+              createdAt: b.createdAt.toISOString(),
+            })),
+            total: bookings.length,
+          },
+          200
+        );
+      }
+
+      // Mode 2: Check availability
+      if (!startTime || !endTime) {
+        return errorResponse(
+          'Missing required parameters for availability check',
+          400,
+          'MISSING_PARAMS'
+        );
+      }
+
+      const parsedStartTime = new Date(startTime);
+      const parsedEndTime = new Date(endTime);
+
+      if (isNaN(parsedStartTime.getTime()) || isNaN(parsedEndTime.getTime())) {
+        return errorResponse('Invalid date format. Use ISO 8601 format', 400, 'INVALID_DATE');
+      }
+
+      const available = await isSlotAvailable(slotId, parsedStartTime, parsedEndTime);
 
       return successResponse(
         {
-          userId,
-          bookings: [],
-          total: 0,
-          message: 'TODO: Implement user bookings retrieval',
+          slotId,
+          startTime: parsedStartTime.toISOString(),
+          endTime: parsedEndTime.toISOString(),
+          available,
         },
         200
       );
+    } catch (error) {
+      console.error('Bookings error:', error);
+      return errorResponse('Internal server error', 500);
     }
-
-    // Mode 2: Check availability
-    if (!slotId || !startTime || !endTime) {
-      return errorResponse(
-        'Missing required query parameters. Use either userId OR (slotId, startTime, endTime)',
-        400,
-        'MISSING_PARAMS'
-      );
-    }
-
-    const parsedStartTime = new Date(startTime);
-    const parsedEndTime = new Date(endTime);
-
-    if (isNaN(parsedStartTime.getTime()) || isNaN(parsedEndTime.getTime())) {
-      return errorResponse('Invalid date format. Use ISO 8601 format', 400, 'INVALID_DATE');
-    }
-
-    const available = await isSlotAvailable(slotId, parsedStartTime, parsedEndTime);
-
-    return successResponse(
-      {
-        slotId,
-        startTime: parsedStartTime.toISOString(),
-        endTime: parsedEndTime.toISOString(),
-        available,
-      },
-      200
-    );
-  } catch (error) {
-    console.error('Availability check error:', error);
-    return errorResponse('Internal server error', 500);
-  }
+  })(request);
 }

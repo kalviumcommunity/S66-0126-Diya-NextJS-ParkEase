@@ -27,7 +27,7 @@ export default function MapPage() {
 
         if (!response.ok) throw new Error('Failed to fetch slots');
         const data = await response.json();
-        setSlots(data.data || []);
+        setSlots(data.data?.items || []);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'An error occurred');
       } finally {
