@@ -143,25 +143,27 @@ export default function BookingsPage() {
               >
                 <div className="grid md:grid-cols-2 gap-6">
                   <div>
-                    <h3 className="text-lg font-bold text-gray-900 mb-4">
+                    <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">
                       Slot {booking.slot?.row || 'N/A'}-{booking.slot?.column || 'N/A'}
                     </h3>
                     <div className="space-y-2">
                       <div>
-                        <span className="text-gray-600 text-sm">Start Time:</span>
-                        <p className="text-gray-900 font-medium">
+                        <span className="text-gray-600 dark:text-gray-400 text-sm">
+                          Start Time:
+                        </span>
+                        <p className="text-gray-900 dark:text-white font-medium">
                           {booking.startTime ? formatDateTime(booking.startTime) : 'N/A'}
                         </p>
                       </div>
                       <div>
-                        <span className="text-gray-600 text-sm">End Time:</span>
-                        <p className="text-gray-900 font-medium">
+                        <span className="text-gray-600 dark:text-gray-400 text-sm">End Time:</span>
+                        <p className="text-gray-900 dark:text-white font-medium">
                           {booking.endTime ? formatDateTime(booking.endTime) : 'N/A'}
                         </p>
                       </div>
                       <div>
-                        <span className="text-gray-600 text-sm">Duration:</span>
-                        <p className="text-gray-900 font-medium">
+                        <span className="text-gray-600 dark:text-gray-400 text-sm">Duration:</span>
+                        <p className="text-gray-900 dark:text-white font-medium">
                           {typeof durationHours === 'number' ? durationHours.toFixed(1) : '0'} hours
                         </p>
                       </div>
@@ -190,12 +192,12 @@ export default function BookingsPage() {
                       </div>
                     )}
                     <div className="mb-4">
-                      <p className="text-gray-600 text-sm">Total Price</p>
-                      <p className="text-3xl font-bold text-gray-900">
+                      <p className="text-gray-600 dark:text-gray-400 text-sm">Total Price</p>
+                      <p className="text-3xl font-bold text-gray-900 dark:text-white">
                         ${typeof totalPrice === 'number' ? totalPrice.toFixed(2) : '0.00'}
                       </p>
                     </div>
-                    <p className="text-gray-500 text-xs">
+                    <p className="text-gray-500 dark:text-gray-400 text-xs">
                       Booked on{' '}
                       {booking.createdAt ? new Date(booking.createdAt).toLocaleDateString() : 'N/A'}
                     </p>
