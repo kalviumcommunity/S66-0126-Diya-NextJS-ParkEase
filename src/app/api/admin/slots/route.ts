@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
+import { successResponse, errorResponse } from '@/lib/apiResponse';
 
 /**
  * PUT /api/admin/slots
@@ -20,23 +21,15 @@ export async function PUT(request: NextRequest) {
 
     // Validate inputs
     if (!slotId || !status) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: 'slotId and status are required',
-        },
-        { status: 400 }
-      );
+      return errorResponse('slotId and status are required', 400, 'MISSING_FIELDS');
     }
 
     const validStatuses = ['AVAILABLE', 'OCCUPIED', 'RESERVED', 'MAINTENANCE'];
     if (!validStatuses.includes(status)) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: `Invalid status. Allowed values: ${validStatuses.join(', ')}`,
-        },
-        { status: 400 }
+      return errorResponse(
+        `Invalid status. Allowed values: ${validStatuses.join(', ')}`,
+        400,
+        'INVALID_STATUS'
       );
     }
 
@@ -47,28 +40,18 @@ export async function PUT(request: NextRequest) {
     // - Log admin action for audit trail
     // - Return updated slot information
 
-    return NextResponse.json(
+    return successResponse(
       {
-        success: true,
-        message: 'Slot status updated successfully',
-        data: {
-          slotId,
-          previousStatus: 'AVAILABLE',
-          newStatus: status,
-          updatedBy: 'admin@parkease.com',
-          message: 'TODO: Implement admin slot status update with authorization',
-        },
+        slotId,
+        previousStatus: 'AVAILABLE',
+        newStatus: status,
+        updatedBy: 'admin@parkease.com',
+        message: 'TODO: Implement admin slot status update with authorization',
       },
-      { status: 200 }
+      200
     );
   } catch (error) {
     console.error('Update slot status error:', error);
-    return NextResponse.json(
-      {
-        success: false,
-        message: 'Internal server error',
-      },
-      { status: 500 }
-    );
+    return errorResponse('Internal server error', 500);
   }
 }

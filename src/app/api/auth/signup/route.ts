@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
+import { successResponse, errorResponse } from '@/lib/apiResponse';
 
 /**
  * POST /api/auth/signup
@@ -17,13 +18,7 @@ export async function POST(request: NextRequest) {
     const { email, password, name } = body;
 
     if (!email || !password || !name) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: 'Missing required fields: email, password, name',
-        },
-        { status: 400 }
-      );
+      return errorResponse('Missing required fields: email, password, name', 400, 'MISSING_FIELDS');
     }
 
     // TODO: Implement actual user registration logic
@@ -34,27 +29,17 @@ export async function POST(request: NextRequest) {
     // - Generate JWT tokens
     // - Set authentication cookies
 
-    return NextResponse.json(
+    return successResponse(
       {
-        success: true,
-        message: 'User registration endpoint',
-        data: {
-          userId: 'user-123',
-          email,
-          name,
-          message: 'TODO: Implement signup logic',
-        },
+        userId: 'user-123',
+        email,
+        name,
+        message: 'TODO: Implement signup logic',
       },
-      { status: 201 }
+      201
     );
   } catch (error) {
     console.error('Signup error:', error);
-    return NextResponse.json(
-      {
-        success: false,
-        message: 'Internal server error',
-      },
-      { status: 500 }
-    );
+    return errorResponse('Internal server error', 500);
   }
 }

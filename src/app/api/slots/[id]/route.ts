@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
+import { successResponse, errorResponse } from '@/lib/apiResponse';
 
 /**
  * GET /api/slots/[id]
@@ -12,13 +13,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     const slotId = params.id;
 
     if (!slotId) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: 'Slot ID is required',
-        },
-        { status: 400 }
-      );
+      return errorResponse('Slot ID is required', 400, 'MISSING_PARAM');
     }
 
     // TODO: Implement get single slot logic
@@ -26,30 +21,20 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     // - Include booking information
     // - Return detailed slot information
 
-    return NextResponse.json(
+    return successResponse(
       {
-        success: true,
-        message: 'Get single parking slot',
-        data: {
-          id: slotId,
-          row: 1,
-          column: 1,
-          status: 'AVAILABLE',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          message: 'TODO: Implement slot details retrieval',
-        },
+        id: slotId,
+        row: 1,
+        column: 1,
+        status: 'AVAILABLE',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        message: 'TODO: Implement slot details retrieval',
       },
-      { status: 200 }
+      200
     );
   } catch (error) {
     console.error('Get slot error:', error);
-    return NextResponse.json(
-      {
-        success: false,
-        message: 'Internal server error',
-      },
-      { status: 500 }
-    );
+    return errorResponse('Internal server error', 500);
   }
 }

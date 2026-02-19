@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
+import { successResponse, errorResponse } from '@/lib/apiResponse';
 
 /**
  * DELETE /api/bookings/[id]
@@ -16,13 +17,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     const bookingId = params.id;
 
     if (!bookingId) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: 'Booking ID is required',
-        },
-        { status: 400 }
-      );
+      return errorResponse('Booking ID is required', 400, 'MISSING_PARAM');
     }
 
     // TODO: Implement booking cancellation logic
@@ -32,26 +27,16 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     // - Call cancelBooking service from bookingService.ts
     // - Return success response
 
-    return NextResponse.json(
+    return successResponse(
       {
-        success: true,
-        message: 'Booking canceled successfully',
-        data: {
-          bookingId,
-          status: 'CANCELED',
-          message: 'TODO: Implement booking cancellation with authorization',
-        },
+        bookingId,
+        status: 'CANCELED',
+        message: 'TODO: Implement booking cancellation with authorization',
       },
-      { status: 200 }
+      200
     );
   } catch (error) {
     console.error('Cancel booking error:', error);
-    return NextResponse.json(
-      {
-        success: false,
-        message: 'Internal server error',
-      },
-      { status: 500 }
-    );
+    return errorResponse('Internal server error', 500);
   }
 }

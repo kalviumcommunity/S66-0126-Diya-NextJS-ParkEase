@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
+import { errorResponse, paginatedResponse } from '@/lib/apiResponse';
 
 /**
  * GET /api/slots?status=AVAILABLE&row=1&column=5
@@ -14,9 +15,9 @@ import { NextRequest, NextResponse } from 'next/server';
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
-    const status = searchParams.get('status');
-    const row = searchParams.get('row');
-    const column = searchParams.get('column');
+    const _status = searchParams.get('status');
+    const _row = searchParams.get('row');
+    const _column = searchParams.get('column');
     const limit = searchParams.get('limit') || '50';
     const offset = searchParams.get('offset') || '0';
 
@@ -25,46 +26,28 @@ export async function GET(request: NextRequest) {
     // - Apply pagination
     // - Return slots with status and location info
 
-    return NextResponse.json(
-      {
-        success: true,
-        message: 'Get all parking slots',
-        filters: {
-          status: status || 'all',
-          row: row || 'all',
-          column: column || 'all',
-          limit: parseInt(limit),
-          offset: parseInt(offset),
+    return paginatedResponse(
+      [
+        {
+          id: 'slot-1',
+          row: 1,
+          column: 1,
+          status: 'AVAILABLE',
         },
-        data: {
-          slots: [
-            {
-              id: 'slot-1',
-              row: 1,
-              column: 1,
-              status: 'AVAILABLE',
-            },
-            {
-              id: 'slot-2',
-              row: 1,
-              column: 2,
-              status: 'OCCUPIED',
-            },
-          ],
-          total: 50,
-          message: 'TODO: Implement filtering and pagination',
+        {
+          id: 'slot-2',
+          row: 1,
+          column: 2,
+          status: 'OCCUPIED',
         },
-      },
-      { status: 200 }
+      ],
+      50,
+      parseInt(limit),
+      parseInt(offset),
+      200
     );
   } catch (error) {
     console.error('Get slots error:', error);
-    return NextResponse.json(
-      {
-        success: false,
-        message: 'Internal server error',
-      },
-      { status: 500 }
-    );
+    return errorResponse('Internal server error', 500);
   }
 }

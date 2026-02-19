@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
+import { successResponse, errorResponse } from '@/lib/apiResponse';
 import { bookParkingSlot, isSlotAvailable } from '@/lib/bookingService';
 
 /**
@@ -18,12 +19,10 @@ export async function POST(request: NextRequest) {
     const { userId, slotId, startTime, endTime } = body;
 
     if (!userId || !slotId || !startTime || !endTime) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Missing required fields: userId, slotId, startTime, endTime',
-        },
-        { status: 400 }
+      return errorResponse(
+        'Missing required fields: userId, slotId, startTime, endTime',
+        400,
+        'MISSING_FIELDS'
       );
     }
 
@@ -32,12 +31,10 @@ export async function POST(request: NextRequest) {
     const parsedEndTime = new Date(endTime);
 
     if (isNaN(parsedStartTime.getTime()) || isNaN(parsedEndTime.getTime())) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Invalid date format. Use ISO 8601 format (e.g., 2026-02-20T10:00:00Z)',
-        },
-        { status: 400 }
+      return errorResponse(
+        'Invalid date format. Use ISO 8601 format (e.g., 2026-02-20T10:00:00Z)',
+        400,
+        'INVALID_DATE'
       );
     }
 
@@ -49,19 +46,13 @@ export async function POST(request: NextRequest) {
     });
 
     if (!result.success) {
-      return NextResponse.json(result, { status: 409 });
+      return errorResponse(result.error || 'Booking failed', 409, 'BOOKING_FAILED');
     }
 
-    return NextResponse.json(result, { status: 201 });
+    return successResponse(result, 201);
   } catch (error) {
     console.error('Booking error:', error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Internal server error',
-      },
-      { status: 500 }
-    );
+    return errorResponse('Internal server error', 500);
   }
 }
 
@@ -87,30 +78,23 @@ export async function GET(request: NextRequest) {
       // - Filter by status if needed
       // - Return paginated list of user's bookings
 
-      return NextResponse.json(
+      return successResponse(
         {
-          success: true,
-          message: 'Get user bookings',
-          data: {
-            userId,
-            bookings: [],
-            total: 0,
-            message: 'TODO: Implement user bookings retrieval',
-          },
+          userId,
+          bookings: [],
+          total: 0,
+          message: 'TODO: Implement user bookings retrieval',
         },
-        { status: 200 }
+        200
       );
     }
 
     // Mode 2: Check availability
     if (!slotId || !startTime || !endTime) {
-      return NextResponse.json(
-        {
-          success: false,
-          error:
-            'Missing required query parameters. Use either userId OR (slotId, startTime, endTime)',
-        },
-        { status: 400 }
+      return errorResponse(
+        'Missing required query parameters. Use either userId OR (slotId, startTime, endTime)',
+        400,
+        'MISSING_PARAMS'
       );
     }
 
@@ -118,32 +102,22 @@ export async function GET(request: NextRequest) {
     const parsedEndTime = new Date(endTime);
 
     if (isNaN(parsedStartTime.getTime()) || isNaN(parsedEndTime.getTime())) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Invalid date format. Use ISO 8601 format',
-        },
-        { status: 400 }
-      );
+      return errorResponse('Invalid date format. Use ISO 8601 format', 400, 'INVALID_DATE');
     }
 
     const available = await isSlotAvailable(slotId, parsedStartTime, parsedEndTime);
 
-    return NextResponse.json({
-      success: true,
-      slotId,
-      startTime: parsedStartTime.toISOString(),
-      endTime: parsedEndTime.toISOString(),
-      available,
-    });
+    return successResponse(
+      {
+        slotId,
+        startTime: parsedStartTime.toISOString(),
+        endTime: parsedEndTime.toISOString(),
+        available,
+      },
+      200
+    );
   } catch (error) {
     console.error('Availability check error:', error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Internal server error',
-      },
-      { status: 500 }
-    );
+    return errorResponse('Internal server error', 500);
   }
 }

@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
+import { successResponse, errorResponse } from '@/lib/apiResponse';
 
 /**
  * POST /api/auth/logout
@@ -11,24 +12,14 @@ export async function POST(_request: NextRequest) {
     // - Invalidate refresh tokens (optional: blacklist in Redis)
     // - Return success message
 
-    return NextResponse.json(
+    return successResponse(
       {
-        success: true,
-        message: 'User logout endpoint',
-        data: {
-          message: 'TODO: Implement logout logic',
-        },
+        message: 'TODO: Implement logout logic',
       },
-      { status: 200 }
+      200
     );
   } catch (error) {
     console.error('Logout error:', error);
-    return NextResponse.json(
-      {
-        success: false,
-        message: 'Internal server error',
-      },
-      { status: 500 }
-    );
+    return errorResponse('Internal server error', 500);
   }
 }

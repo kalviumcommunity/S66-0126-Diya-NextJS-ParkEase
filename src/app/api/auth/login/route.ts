@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
+import { successResponse, errorResponse } from '@/lib/apiResponse';
 
 /**
  * POST /api/auth/login
@@ -16,13 +17,7 @@ export async function POST(request: NextRequest) {
     const { email, password } = body;
 
     if (!email || !password) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: 'Missing required fields: email, password',
-        },
-        { status: 400 }
-      );
+      return errorResponse('Missing required fields: email, password', 400, 'MISSING_FIELDS');
     }
 
     // TODO: Implement actual authentication logic
@@ -33,28 +28,18 @@ export async function POST(request: NextRequest) {
     // - Set secure HTTP-only cookies
     // - Return tokens and user info
 
-    return NextResponse.json(
+    return successResponse(
       {
-        success: true,
-        message: 'User login endpoint',
-        data: {
-          userId: 'user-123',
-          email,
-          accessToken: 'jwt-access-token-here',
-          refreshToken: 'jwt-refresh-token-here',
-          message: 'TODO: Implement login logic',
-        },
+        userId: 'user-123',
+        email,
+        accessToken: 'jwt-access-token-here',
+        refreshToken: 'jwt-refresh-token-here',
+        message: 'TODO: Implement login logic',
       },
-      { status: 200 }
+      200
     );
   } catch (error) {
     console.error('Login error:', error);
-    return NextResponse.json(
-      {
-        success: false,
-        message: 'Internal server error',
-      },
-      { status: 500 }
-    );
+    return errorResponse('Internal server error', 500);
   }
 }
