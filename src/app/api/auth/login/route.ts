@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { successResponse, errorResponse } from '@/lib/apiResponse';
+import { loginSchema } from '@/lib/validations/auth';
 
 /**
  * POST /api/auth/login
@@ -14,11 +15,17 @@ import { successResponse, errorResponse } from '@/lib/apiResponse';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { email, password } = body;
 
-    if (!email || !password) {
-      return errorResponse('Missing required fields: email, password', 400, 'MISSING_FIELDS');
+    // Validate request body
+    const validation = loginSchema.safeParse(body);
+    if (!validation.success) {
+      const errors = validation.error.issues
+        .map((e) => `${e.path.join('.')}: ${e.message}`)
+        .join(', ');
+      return errorResponse(errors, 400, 'VALIDATION_ERROR');
     }
+
+    const { email, password: _password } = validation.data;
 
     // TODO: Implement actual authentication logic
     // - Find user by email

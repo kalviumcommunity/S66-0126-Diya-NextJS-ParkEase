@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { successResponse, errorResponse } from '@/lib/apiResponse';
 import { bookParkingSlot, isSlotAvailable } from '@/lib/bookingService';
+import { createBookingSchema } from '@/lib/validations/booking';
 
 /**
  * POST /api/bookings - Create a new booking
@@ -16,27 +17,21 @@ import { bookParkingSlot, isSlotAvailable } from '@/lib/bookingService';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { userId, slotId, startTime, endTime } = body;
 
-    if (!userId || !slotId || !startTime || !endTime) {
-      return errorResponse(
-        'Missing required fields: userId, slotId, startTime, endTime',
-        400,
-        'MISSING_FIELDS'
-      );
+    // Validate request body
+    const validation = createBookingSchema.safeParse(body);
+    if (!validation.success) {
+      const errors = validation.error.issues
+        .map((e) => `${e.path.join('.')}: ${e.message}`)
+        .join(', ');
+      return errorResponse(errors, 400, 'VALIDATION_ERROR');
     }
+
+    const { userId, slotId, startTime, endTime } = validation.data;
 
     // Parse dates
     const parsedStartTime = new Date(startTime);
     const parsedEndTime = new Date(endTime);
-
-    if (isNaN(parsedStartTime.getTime()) || isNaN(parsedEndTime.getTime())) {
-      return errorResponse(
-        'Invalid date format. Use ISO 8601 format (e.g., 2026-02-20T10:00:00Z)',
-        400,
-        'INVALID_DATE'
-      );
-    }
 
     const result = await bookParkingSlot({
       userId,

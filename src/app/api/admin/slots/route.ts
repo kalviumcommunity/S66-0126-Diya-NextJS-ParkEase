@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { successResponse, errorResponse } from '@/lib/apiResponse';
+import { updateSlotSchema } from '@/lib/validations/slot';
 
 /**
  * PUT /api/admin/slots
@@ -17,21 +18,17 @@ import { successResponse, errorResponse } from '@/lib/apiResponse';
 export async function PUT(request: NextRequest) {
   try {
     const body = await request.json();
-    const { slotId, status } = body;
 
-    // Validate inputs
-    if (!slotId || !status) {
-      return errorResponse('slotId and status are required', 400, 'MISSING_FIELDS');
+    // Validate request body
+    const validation = updateSlotSchema.safeParse(body);
+    if (!validation.success) {
+      const errors = validation.error.issues
+        .map((e) => `${e.path.join('.')}: ${e.message}`)
+        .join(', ');
+      return errorResponse(errors, 400, 'VALIDATION_ERROR');
     }
 
-    const validStatuses = ['AVAILABLE', 'OCCUPIED', 'RESERVED', 'MAINTENANCE'];
-    if (!validStatuses.includes(status)) {
-      return errorResponse(
-        `Invalid status. Allowed values: ${validStatuses.join(', ')}`,
-        400,
-        'INVALID_STATUS'
-      );
-    }
+    const { slotId, status } = validation.data;
 
     // TODO: Implement admin slot update logic
     // - Verify authentication and admin role from JWT

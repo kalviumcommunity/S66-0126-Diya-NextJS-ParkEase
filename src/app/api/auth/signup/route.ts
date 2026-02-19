@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { successResponse, errorResponse } from '@/lib/apiResponse';
+import { signupSchema } from '@/lib/validations/auth';
 
 /**
  * POST /api/auth/signup
@@ -15,14 +16,19 @@ import { successResponse, errorResponse } from '@/lib/apiResponse';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { email, password, name } = body;
 
-    if (!email || !password || !name) {
-      return errorResponse('Missing required fields: email, password, name', 400, 'MISSING_FIELDS');
+    // Validate request body
+    const validation = signupSchema.safeParse(body);
+    if (!validation.success) {
+      const errors = validation.error.issues
+        .map((e) => `${e.path.join('.')}: ${e.message}`)
+        .join(', ');
+      return errorResponse(errors, 400, 'VALIDATION_ERROR');
     }
 
+    const { email, password: _password, name } = validation.data;
+
     // TODO: Implement actual user registration logic
-    // - Validate email format
     // - Hash password with bcryptjs
     // - Check if user already exists
     // - Create user in database
