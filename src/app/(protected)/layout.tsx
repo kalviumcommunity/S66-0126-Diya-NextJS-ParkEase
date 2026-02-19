@@ -18,6 +18,11 @@ export default function ProtectedLayout({ children }: { children: React.ReactNod
 
     try {
       const payload = JSON.parse(atob(token.split('.')[1]));
+      if (payload?.exp && Date.now() >= payload.exp * 1000) {
+        localStorage.removeItem('accessToken');
+        router.push('/auth/login');
+        return;
+      }
       setUser(payload);
     } catch {
       localStorage.removeItem('accessToken');

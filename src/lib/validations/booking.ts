@@ -4,7 +4,6 @@ import { z } from 'zod';
  * Validation schema for creating a booking
  */
 export const createBookingSchema = z.object({
-  userId: z.string().uuid('Invalid user ID'),
   slotId: z.string().uuid('Invalid slot ID'),
   startTime: z.string().datetime('Invalid start time. Use ISO 8601 format'),
   endTime: z.string().datetime('Invalid end time. Use ISO 8601 format'),

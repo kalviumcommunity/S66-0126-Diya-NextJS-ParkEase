@@ -1,4 +1,3 @@
-import { NextRequest } from 'next/server';
 import { successResponse, errorResponse } from '@/lib/apiResponse';
 import { bookParkingSlot, isSlotAvailable } from '@/lib/bookingService';
 import { createBookingSchema } from '@/lib/validations/booking';
@@ -12,77 +11,83 @@ import { authenticate, AuthenticatedRequest } from '@/lib/auth';
  *
  * Request body:
  * {
- *   "userId": "user-id",
  *   "slotId": "slot-id",
  *   "startTime": "2026-02-20T10:00:00Z",
  *   "endTime": "2026-02-20T12:00:00Z"
  * }
  */
-export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json();
-
-    // Validate request body
-    const validation = createBookingSchema.safeParse(body);
-    if (!validation.success) {
-      const errors = validation.error.issues
-        .map((e) => `${e.path.join('.')}: ${e.message}`)
-        .join(', ');
-      return errorResponse(errors, 400, 'VALIDATION_ERROR');
-    }
-
-    const { userId, slotId, startTime, endTime } = validation.data;
-
-    // Parse dates
-    const parsedStartTime = new Date(startTime);
-    const parsedEndTime = new Date(endTime);
-
-    const result = await bookParkingSlot({
-      userId,
-      slotId,
-      startTime: parsedStartTime,
-      endTime: parsedEndTime,
-    });
-
-    if (!result.success) {
-      return errorResponse(result.error || 'Booking failed', 409, 'BOOKING_FAILED');
-    }
-
-    // Invalidate slots cache after booking creation
-    await invalidateCachePattern('slots:*');
-
-    // Send booking confirmation email (fire and forget - don't block on email)
+export async function POST(request: AuthenticatedRequest) {
+  return authenticate(async (authRequest: AuthenticatedRequest) => {
     try {
-      const booking = result.booking;
-      const slot = result.slot;
-      const user = await prisma.user.findUnique({
-        where: { id: userId },
-        select: { email: true, name: true },
+      const body = await authRequest.json();
+
+      // Validate request body
+      const validation = createBookingSchema.safeParse(body);
+      if (!validation.success) {
+        const errors = validation.error.issues
+          .map((e) => `${e.path.join('.')}: ${e.message}`)
+          .join(', ');
+        return errorResponse(errors, 400, 'VALIDATION_ERROR');
+      }
+
+      const user = authRequest.user;
+      if (!user) {
+        return errorResponse('Unauthorized', 401, 'UNAUTHORIZED');
+      }
+
+      const { slotId, startTime, endTime } = validation.data;
+
+      // Parse dates
+      const parsedStartTime = new Date(startTime);
+      const parsedEndTime = new Date(endTime);
+
+      const result = await bookParkingSlot({
+        userId: user.userId,
+        slotId,
+        startTime: parsedStartTime,
+        endTime: parsedEndTime,
       });
 
-      if (user && booking && slot) {
-        const confirmationHtml = getBookingConfirmationEmailHtml(user.name, {
-          bookingId: booking.id,
-          slotLocation: 'Parking Location', // Could be enhanced with actual location data
-          row: slot.row,
-          column: slot.column,
-          startTime: booking.startTime.toISOString(),
-          endTime: booking.endTime.toISOString(),
+      if (!result.success) {
+        return errorResponse(result.error || 'Booking failed', 409, 'BOOKING_FAILED');
+      }
+
+      // Invalidate slots cache after booking creation
+      await invalidateCachePattern('slots:*');
+
+      // Send booking confirmation email (fire and forget - don't block on email)
+      try {
+        const booking = result.booking;
+        const slot = result.slot;
+        const userRecord = await prisma.user.findUnique({
+          where: { id: user.userId },
+          select: { email: true, name: true },
         });
 
-        await sendEmail(user.email, 'Booking Confirmation', confirmationHtml);
-        console.log(`Booking confirmation email sent to ${user.email}`);
-      }
-    } catch (error) {
-      console.error('Failed to send booking confirmation email:', error);
-      // Don't fail the booking if email fails - booking is already created
-    }
+        if (userRecord && booking && slot) {
+          const confirmationHtml = getBookingConfirmationEmailHtml(userRecord.name, {
+            bookingId: booking.id,
+            slotLocation: 'Parking Location', // Could be enhanced with actual location data
+            row: slot.row,
+            column: slot.column,
+            startTime: booking.startTime.toISOString(),
+            endTime: booking.endTime.toISOString(),
+          });
 
-    return successResponse(result, 201);
-  } catch (error) {
-    console.error('Booking error:', error);
-    return errorResponse('Internal server error', 500);
-  }
+          await sendEmail(userRecord.email, 'Booking Confirmation', confirmationHtml);
+          console.log(`Booking confirmation email sent to ${userRecord.email}`);
+        }
+      } catch (error) {
+        console.error('Failed to send booking confirmation email:', error);
+        // Don't fail the booking if email fails - booking is already created
+      }
+
+      return successResponse(result, 201);
+    } catch (error) {
+      console.error('Booking error:', error);
+      return errorResponse('Internal server error', 500);
+    }
+  })(request);
 }
 
 /**

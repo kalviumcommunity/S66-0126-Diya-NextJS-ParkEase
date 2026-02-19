@@ -25,13 +25,28 @@ export default function SlotDetailsPage({ params }: { params: Promise<{ id: stri
   useEffect(() => {
     const fetchSlot = async () => {
       try {
+        const token = localStorage.getItem('accessToken');
+        if (!token) {
+          throw new Error('No authentication token found. Please log in again.');
+        }
+
         const response = await fetch(`/api/slots/${id}`, {
           headers: {
-            Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
+            Authorization: `Bearer ${token}`,
           },
         });
 
-        if (!response.ok) throw new Error('Failed to fetch slot details');
+        if (!response.ok) {
+          if (response.status === 401) {
+            localStorage.removeItem('accessToken');
+            router.push('/auth/login');
+            return;
+          }
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(
+            errorData.error?.message || `Failed to fetch slot details (${response.status})`
+          );
+        }
         const data = await response.json();
         setSlot(data.data);
       } catch (err) {
@@ -70,6 +85,9 @@ export default function SlotDetailsPage({ params }: { params: Promise<{ id: stri
     setIsBooking(true);
 
     try {
+      const startIso = new Date(startTime).toISOString();
+      const endIso = new Date(endTime).toISOString();
+
       const response = await fetch('/api/bookings', {
         method: 'POST',
         headers: {
@@ -78,8 +96,8 @@ export default function SlotDetailsPage({ params }: { params: Promise<{ id: stri
         },
         body: JSON.stringify({
           slotId: id,
-          startTime,
-          endTime,
+          startTime: startIso,
+          endTime: endIso,
         }),
       });
 

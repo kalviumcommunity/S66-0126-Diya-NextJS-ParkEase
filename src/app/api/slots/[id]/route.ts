@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import jwt from 'jsonwebtoken';
 import { successResponse, errorResponse } from '@/lib/apiResponse';
+import { prisma } from '@/lib/prisma';
 import { AuthUser } from '@/lib/auth';
 
 /**
@@ -37,18 +38,30 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       return errorResponse('Slot ID is required', 400, 'MISSING_PARAM');
     }
 
-    // For now, return a mock response
-    const slot = {
-      id: slotId,
-      row: 1,
-      column: 1,
-      status: 'AVAILABLE',
-      pricePerHour: 5,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
+    // Query the database for the slot
+    const slot = await prisma.parkingSlot.findUnique({
+      where: { id: slotId },
+      select: {
+        id: true,
+        row: true,
+        column: true,
+        status: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
 
-    return successResponse(slot, 200);
+    if (!slot) {
+      return errorResponse('Slot not found', 404, 'SLOT_NOT_FOUND');
+    }
+
+    return successResponse(
+      {
+        ...slot,
+        pricePerHour: 5,
+      },
+      200
+    );
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);
     console.error('Get slot error:', errorMsg);
