@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, use } from 'react';
 
 interface Slot {
   id: string;
@@ -11,7 +11,8 @@ interface Slot {
   pricePerHour: number;
 }
 
-export default function SlotDetailsPage({ params }: { params: { id: string } }) {
+export default function SlotDetailsPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
   const router = useRouter();
   const [slot, setSlot] = useState<Slot | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -24,7 +25,7 @@ export default function SlotDetailsPage({ params }: { params: { id: string } }) 
   useEffect(() => {
     const fetchSlot = async () => {
       try {
-        const response = await fetch(`/api/slots/${params.id}`, {
+        const response = await fetch(`/api/slots/${id}`, {
           headers: {
             Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
           },
@@ -41,14 +42,15 @@ export default function SlotDetailsPage({ params }: { params: { id: string } }) 
     };
 
     fetchSlot();
-  }, [params.id]);
+  }, [id]);
 
   const calculatePrice = () => {
     if (!startTime || !endTime || !slot) return 0;
     const start = new Date(startTime).getTime();
     const end = new Date(endTime).getTime();
     const hours = (end - start) / (1000 * 60 * 60);
-    return hours > 0 ? hours * slot.pricePerHour : 0;
+    const pricePerHour = typeof slot?.pricePerHour === 'number' ? slot.pricePerHour : 5; // Default to $5/hour
+    return hours > 0 ? hours * pricePerHour : 0;
   };
 
   const handleBooking = async (e: React.FormEvent) => {
@@ -75,7 +77,7 @@ export default function SlotDetailsPage({ params }: { params: { id: string } }) 
           Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
         },
         body: JSON.stringify({
-          slotId: params.id,
+          slotId: id,
           startTime,
           endTime,
         }),
@@ -166,7 +168,9 @@ export default function SlotDetailsPage({ params }: { params: { id: string } }) 
             </div>
             <div>
               <span className="text-gray-600 text-sm">Price per Hour</span>
-              <p className="text-gray-900 font-bold text-lg">${slot.pricePerHour.toFixed(2)}</p>
+              <p className="text-gray-900 font-bold text-lg">
+                ${typeof slot?.pricePerHour === 'number' ? slot.pricePerHour.toFixed(2) : '0.00'}
+              </p>
             </div>
           </div>
 
@@ -213,17 +217,23 @@ export default function SlotDetailsPage({ params }: { params: { id: string } }) 
                 <div className="flex justify-between items-center">
                   <span className="text-gray-600">Duration</span>
                   <span className="font-bold text-gray-900">
-                    {(
-                      (new Date(endTime).getTime() - new Date(startTime).getTime()) /
-                      (1000 * 60 * 60)
-                    ).toFixed(1)}{' '}
+                    {(() => {
+                      const duration =
+                        (new Date(endTime).getTime() - new Date(startTime).getTime()) /
+                        (1000 * 60 * 60);
+                      return typeof duration === 'number' ? duration.toFixed(1) : '0';
+                    })()}{' '}
                     hours
                   </span>
                 </div>
                 <div className="flex justify-between items-center mt-2 pt-2 border-t border-gray-300">
                   <span className="text-gray-600">Total Price</span>
                   <span className="text-2xl font-bold text-gray-900">
-                    ${calculatePrice().toFixed(2)}
+                    $
+                    {(() => {
+                      const price = calculatePrice();
+                      return typeof price === 'number' ? price.toFixed(2) : '0.00';
+                    })()}
                   </span>
                 </div>
               </div>

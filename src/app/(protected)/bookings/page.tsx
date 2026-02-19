@@ -101,61 +101,84 @@ export default function BookingsPage() {
 
       <div className="grid gap-4">
         {bookings.map((booking) => {
-          const startDate = new Date(booking.startTime);
-          const endDate = new Date(booking.endTime);
-          const durationHours = (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60);
-          const pricePerHour = 5; // Default pricing
-          const totalPrice = durationHours * pricePerHour;
+          try {
+            // Safely parse dates
+            const startDate = booking.startTime ? new Date(booking.startTime) : null;
+            const endDate = booking.endTime ? new Date(booking.endTime) : null;
 
-          return (
-            <div
-              key={booking.id}
-              className="bg-white rounded-lg shadow-md p-6 border-l-4 border-blue-600"
-            >
-              <div className="grid md:grid-cols-2 gap-6">
-                <div>
-                  <h3 className="text-lg font-bold text-gray-900 mb-4">
-                    Slot {booking.slot?.row}-{booking.slot?.column}
-                  </h3>
-                  <div className="space-y-2">
-                    <div>
-                      <span className="text-gray-600 text-sm">Start Time:</span>
-                      <p className="text-gray-900 font-medium">
-                        {formatDateTime(booking.startTime)}
+            // Calculate duration with safety check
+            let durationHours = 0;
+            if (startDate && endDate && !isNaN(startDate.getTime()) && !isNaN(endDate.getTime())) {
+              durationHours = (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60);
+            }
+
+            const pricePerHour = 5; // Default pricing
+            const totalPrice = typeof durationHours === 'number' ? durationHours * pricePerHour : 0;
+
+            return (
+              <div
+                key={booking.id}
+                className="bg-white rounded-lg shadow-md p-6 border-l-4 border-blue-600"
+              >
+                <div className="grid md:grid-cols-2 gap-6">
+                  <div>
+                    <h3 className="text-lg font-bold text-gray-900 mb-4">
+                      Slot {booking.slot?.row || 'N/A'}-{booking.slot?.column || 'N/A'}
+                    </h3>
+                    <div className="space-y-2">
+                      <div>
+                        <span className="text-gray-600 text-sm">Start Time:</span>
+                        <p className="text-gray-900 font-medium">
+                          {booking.startTime ? formatDateTime(booking.startTime) : 'N/A'}
+                        </p>
+                      </div>
+                      <div>
+                        <span className="text-gray-600 text-sm">End Time:</span>
+                        <p className="text-gray-900 font-medium">
+                          {booking.endTime ? formatDateTime(booking.endTime) : 'N/A'}
+                        </p>
+                      </div>
+                      <div>
+                        <span className="text-gray-600 text-sm">Duration:</span>
+                        <p className="text-gray-900 font-medium">
+                          {typeof durationHours === 'number' ? durationHours.toFixed(1) : '0'} hours
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="text-right">
+                    <div className="mb-4">
+                      <span
+                        className={`inline-block px-4 py-2 rounded-full text-sm font-bold ${getStatusColor(
+                          booking.status
+                        )}`}
+                      >
+                        {booking.status}
+                      </span>
+                    </div>
+                    <div className="mb-4">
+                      <p className="text-gray-600 text-sm">Total Price</p>
+                      <p className="text-3xl font-bold text-gray-900">
+                        ${typeof totalPrice === 'number' ? totalPrice.toFixed(2) : '0.00'}
                       </p>
                     </div>
-                    <div>
-                      <span className="text-gray-600 text-sm">End Time:</span>
-                      <p className="text-gray-900 font-medium">{formatDateTime(booking.endTime)}</p>
-                    </div>
-                    <div>
-                      <span className="text-gray-600 text-sm">Duration:</span>
-                      <p className="text-gray-900 font-medium">{durationHours.toFixed(1)} hours</p>
-                    </div>
+                    <p className="text-gray-500 text-xs">
+                      Booked on{' '}
+                      {booking.createdAt ? new Date(booking.createdAt).toLocaleDateString() : 'N/A'}
+                    </p>
                   </div>
-                </div>
-
-                <div className="text-right">
-                  <div className="mb-4">
-                    <span
-                      className={`inline-block px-4 py-2 rounded-full text-sm font-bold ${getStatusColor(
-                        booking.status
-                      )}`}
-                    >
-                      {booking.status}
-                    </span>
-                  </div>
-                  <div className="mb-4">
-                    <p className="text-gray-600 text-sm">Total Price</p>
-                    <p className="text-3xl font-bold text-gray-900">${totalPrice.toFixed(2)}</p>
-                  </div>
-                  <p className="text-gray-500 text-xs">
-                    Booked on {new Date(booking.createdAt).toLocaleDateString()}
-                  </p>
                 </div>
               </div>
-            </div>
-          );
+            );
+          } catch (err) {
+            console.error('Error rendering booking:', err, booking);
+            return (
+              <div key={booking.id} className="bg-red-50 p-4 rounded-lg border border-red-200">
+                <p className="text-red-700">Error displaying booking. Please try again.</p>
+              </div>
+            );
+          }
         })}
       </div>
     </div>
