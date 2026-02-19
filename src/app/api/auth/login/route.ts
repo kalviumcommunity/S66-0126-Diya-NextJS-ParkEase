@@ -1,6 +1,10 @@
 import { NextRequest } from 'next/server';
 import { successResponse, errorResponse } from '@/lib/apiResponse';
 import { loginSchema } from '@/lib/validations/auth';
+import { prisma } from '@/lib/prisma';
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
+import { cookies } from 'next/headers';
 
 /**
  * POST /api/auth/login
@@ -25,23 +29,82 @@ export async function POST(request: NextRequest) {
       return errorResponse(errors, 400, 'VALIDATION_ERROR');
     }
 
-    const { email, password: _password } = validation.data;
+    const { email, password } = validation.data;
 
-    // TODO: Implement actual authentication logic
-    // - Find user by email
-    // - Verify password hash with bcryptjs
-    // - Generate JWT access token (15 mins)
-    // - Generate JWT refresh token (7 days)
-    // - Set secure HTTP-only cookies
-    // - Return tokens and user info
+    // Find user by email
+    const user = await prisma.user.findUnique({
+      where: { email },
+      select: {
+        id: true,
+        email: true,
+        passwordHash: true,
+        name: true,
+        role: true,
+      },
+    });
 
+    if (!user) {
+      return errorResponse('Invalid email or password', 401, 'INVALID_CREDENTIALS');
+    }
+
+    // Verify password with bcrypt
+    const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
+
+    if (!isPasswordValid) {
+      return errorResponse('Invalid email or password', 401, 'INVALID_CREDENTIALS');
+    }
+
+    // Get JWT secrets from environment
+    const jwtSecret = process.env.JWT_SECRET;
+    const refreshTokenSecret = process.env.REFRESH_TOKEN_SECRET;
+
+    if (!jwtSecret || !refreshTokenSecret) {
+      console.error('JWT secrets not configured');
+      return errorResponse('Authentication configuration error', 500);
+    }
+
+    // Generate JWT access token (expires in 15 minutes)
+    const accessToken = jwt.sign(
+      {
+        userId: user.id,
+        email: user.email,
+        role: user.role,
+      },
+      jwtSecret,
+      { expiresIn: '15m' }
+    );
+
+    // Generate JWT refresh token (expires in 7 days)
+    const refreshToken = jwt.sign(
+      {
+        userId: user.id,
+        email: user.email,
+      },
+      refreshTokenSecret,
+      { expiresIn: '7d' }
+    );
+
+    // Set refresh token as HTTP-only cookie
+    const cookieStore = await cookies();
+    cookieStore.set('refreshToken', refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60, // 7 days in seconds
+      path: '/',
+    });
+
+    // Return access token in response body
     return successResponse(
       {
-        userId: 'user-123',
-        email,
-        accessToken: 'jwt-access-token-here',
-        refreshToken: 'jwt-refresh-token-here',
-        message: 'TODO: Implement login logic',
+        accessToken,
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          role: user.role,
+        },
+        expiresIn: 900, // 15 minutes in seconds
       },
       200
     );

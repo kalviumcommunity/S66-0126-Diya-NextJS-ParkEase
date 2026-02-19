@@ -1,6 +1,8 @@
 import { NextRequest } from 'next/server';
 import { successResponse, errorResponse } from '@/lib/apiResponse';
 import { signupSchema } from '@/lib/validations/auth';
+import { prisma } from '@/lib/prisma';
+import bcrypt from 'bcryptjs';
 
 /**
  * POST /api/auth/signup
@@ -26,21 +28,47 @@ export async function POST(request: NextRequest) {
       return errorResponse(errors, 400, 'VALIDATION_ERROR');
     }
 
-    const { email, password: _password, name } = validation.data;
+    const { email, password, name } = validation.data;
 
-    // TODO: Implement actual user registration logic
-    // - Hash password with bcryptjs
-    // - Check if user already exists
-    // - Create user in database
-    // - Generate JWT tokens
-    // - Set authentication cookies
+    // Check if user already exists
+    const existingUser = await prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (existingUser) {
+      return errorResponse('User with this email already exists', 409, 'USER_EXISTS');
+    }
+
+    // Hash password with bcrypt (10 rounds)
+    const passwordHash = await bcrypt.hash(password, 10);
+
+    // Create user in database
+    const user = await prisma.user.create({
+      data: {
+        email,
+        passwordHash,
+        name,
+        role: 'USER',
+      },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        createdAt: true,
+      },
+    });
 
     return successResponse(
       {
-        userId: 'user-123',
-        email,
-        name,
-        message: 'TODO: Implement signup logic',
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          role: user.role,
+          createdAt: user.createdAt,
+        },
+        message: 'User registered successfully',
       },
       201
     );
