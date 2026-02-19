@@ -1,6 +1,7 @@
-import { NextRequest } from 'next/server';
 import { successResponse, errorResponse } from '@/lib/apiResponse';
 import { updateSlotSchema } from '@/lib/validations/slot';
+import { withAuth, AuthenticatedRequest } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
 
 /**
  * PUT /api/admin/slots
@@ -15,7 +16,7 @@ import { updateSlotSchema } from '@/lib/validations/slot';
  * Authorization:
  * - Requires JWT token with ADMIN role
  */
-export async function PUT(request: NextRequest) {
+export const PUT = withAuth(['ADMIN'], async (request: AuthenticatedRequest) => {
   try {
     const body = await request.json();
 
@@ -30,20 +31,34 @@ export async function PUT(request: NextRequest) {
 
     const { slotId, status } = validation.data;
 
-    // TODO: Implement admin slot update logic
-    // - Verify authentication and admin role from JWT
-    // - Check if slot exists
-    // - Update slot status in database
-    // - Log admin action for audit trail
-    // - Return updated slot information
+    // Check if slot exists
+    const slot = await prisma.parkingSlot.findUnique({
+      where: { id: slotId },
+    });
+
+    if (!slot) {
+      return errorResponse('Parking slot not found', 404, 'SLOT_NOT_FOUND');
+    }
+
+    // Update slot status
+    const updatedSlot = await prisma.parkingSlot.update({
+      where: { id: slotId },
+      data: { status },
+    });
 
     return successResponse(
       {
-        slotId,
-        previousStatus: 'AVAILABLE',
+        slot: {
+          id: updatedSlot.id,
+          row: updatedSlot.row,
+          column: updatedSlot.column,
+          status: updatedSlot.status,
+          updatedAt: updatedSlot.updatedAt,
+        },
+        previousStatus: slot.status,
         newStatus: status,
-        updatedBy: 'admin@parkease.com',
-        message: 'TODO: Implement admin slot status update with authorization',
+        updatedBy: request.user?.email,
+        message: 'Slot status updated successfully',
       },
       200
     );
@@ -51,4 +66,4 @@ export async function PUT(request: NextRequest) {
     console.error('Update slot status error:', error);
     return errorResponse('Internal server error', 500);
   }
-}
+});
