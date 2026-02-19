@@ -75,7 +75,7 @@ export default function BookingsPage() {
       <div className="flex justify-center items-center py-20">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-blue-600 mx-auto mb-4"></div>
-          <p>Loading your bookings...</p>
+          <p className="text-gray-700 dark:text-gray-300">Loading your bookings...</p>
         </div>
       </div>
     );
@@ -83,9 +83,11 @@ export default function BookingsPage() {
 
   if (error) {
     return (
-      <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
-        <h2 className="text-xl font-bold text-red-900 mb-2">Error Loading Bookings</h2>
-        <p className="text-red-700">
+      <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6 text-center">
+        <h2 className="text-xl font-bold text-red-900 dark:text-red-400 mb-2">
+          Error Loading Bookings
+        </h2>
+        <p className="text-red-700 dark:text-red-300">
           {error instanceof Error ? error.message : 'An error occurred'}
         </p>
       </div>
@@ -94,9 +96,13 @@ export default function BookingsPage() {
 
   if (bookings.length === 0) {
     return (
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-8 text-center">
-        <h2 className="text-2xl font-bold text-blue-900 mb-2">No Bookings Yet</h2>
-        <p className="text-blue-700 mb-6">You haven't made any parking reservations yet.</p>
+      <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-8 text-center">
+        <h2 className="text-2xl font-bold text-blue-900 dark:text-blue-400 mb-2">
+          No Bookings Yet
+        </h2>
+        <p className="text-blue-700 dark:text-blue-300 mb-6">
+          You haven't made any parking reservations yet.
+        </p>
         <a
           href="/map"
           className="inline-block bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 transition"
@@ -109,8 +115,10 @@ export default function BookingsPage() {
 
   return (
     <div>
-      <h1 className="text-3xl font-bold text-gray-900 mb-2">My Bookings</h1>
-      <p className="text-gray-600 mb-8">Manage and track your parking reservations</p>
+      <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">My Bookings</h1>
+      <p className="text-gray-600 dark:text-gray-400 mb-8">
+        Manage and track your parking reservations
+      </p>
 
       <div className="grid gap-4">
         {bookings.map((booking) => {
@@ -131,7 +139,7 @@ export default function BookingsPage() {
             return (
               <div
                 key={booking.id}
-                className="bg-white rounded-lg shadow-md p-6 border-l-4 border-blue-600"
+                className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 border-l-4 border-blue-600 dark:border-blue-500"
               >
                 <div className="grid md:grid-cols-2 gap-6">
                   <div>
