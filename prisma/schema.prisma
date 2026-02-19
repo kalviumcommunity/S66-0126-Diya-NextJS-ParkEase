@@ -1,0 +1,136 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================================
+// ENUMS
+// ============================================================================
+
+/// User roles
+enum UserRole {
+  USER
+  ADMIN
+}
+
+/// Parking slot status
+enum SlotStatus {
+  AVAILABLE
+  OCCUPIED
+  RESERVED
+  MAINTENANCE
+}
+
+/// Booking status lifecycle
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+}
+
+/// Crowd report action type
+enum CrowdAction {
+  LEFT
+  OCCUPIED
+}
+
+// ============================================================================
+// MODELS
+// ============================================================================
+
+/// User accounts and authentication
+model User {
+  id        String   @id @default(uuid()) @db.Uuid
+  email     String   @unique @db.VarChar(255)
+  passwordHash String @map("password_hash") @db.VarChar(255)
+  name      String   @db.VarChar(255)
+  role      UserRole @default(USER)
+  
+  // Relations
+  bookings      Booking[]
+  crowdReports  CrowdReport[]
+  
+  // Timestamps
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz()
+
+  @@map("users")
+}
+
+/// Parking slots
+model ParkingSlot {
+  id     String     @id @default(uuid()) @db.Uuid
+  row    Int
+  column Int
+  status SlotStatus @default(AVAILABLE)
+  
+  // Relations
+  bookings      Booking[]
+  crowdReports  CrowdReport[]
+  
+  // Timestamps
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz()
+
+  // Constraints
+  @@unique([row, column], name: "unique_slot_location")
+  @@index([status])
+  @@index([row, column])
+  @@map("parking_slots")
+}
+
+/// Parking slot bookings
+model Booking {
+  id        String          @id @default(uuid()) @db.Uuid
+  userId    String          @map("user_id") @db.Uuid
+  slotId    String          @map("slot_id") @db.Uuid
+  startTime DateTime        @map("start_time") @db.Timestamptz()
+  endTime   DateTime        @map("end_time") @db.Timestamptz()
+  status    BookingStatus   @default(PENDING)
+  
+  // Relations
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  slot      ParkingSlot     @relation(fields: [slotId], references: [id], onDelete: Restrict)
+  
+  // Timestamps
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  // Indexes for performance
+  @@index([userId])
+  @@index([slotId])
+  @@index([status])
+  @@index([startTime])
+  @@index([endTime])
+  @@index([slotId, startTime, endTime])
+  @@index([slotId, status, startTime, endTime])
+  @@index([createdAt(sort: Desc)])
+  @@map("bookings")
+}
+
+/// Crowd-sourced parking availability reports
+model CrowdReport {
+  id        String      @id @default(uuid()) @db.Uuid
+  userId    String      @map("user_id") @db.Uuid
+  slotId    String      @map("slot_id") @db.Uuid
+  action    CrowdAction
+  timestamp DateTime    @default(now()) @db.Timestamptz()
+  
+  // Relations
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  slot      ParkingSlot @relation(fields: [slotId], references: [id], onDelete: Cascade)
+
+  // Indexes for performance
+  @@index([userId])
+  @@index([slotId])
+  @@index([timestamp(sort: Desc)])
+  @@index([slotId, timestamp(sort: Desc)])
+  @@map("crowd_reports")
+}
