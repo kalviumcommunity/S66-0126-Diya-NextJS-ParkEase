@@ -1,7 +1,12 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useEffect, useState, use } from 'react';
+import { useEffect, useMemo, useState, use } from 'react';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { toast } from 'sonner';
+import { useAuth } from '@/context/AuthContext';
 
 interface Slot {
   id: string;
@@ -11,16 +16,40 @@ interface Slot {
   pricePerHour: number;
 }
 
+const bookingSchema = z
+  .object({
+    startTime: z.string().min(1, 'Start time is required'),
+    endTime: z.string().min(1, 'End time is required'),
+  })
+  .refine((values) => new Date(values.endTime).getTime() > new Date(values.startTime).getTime(), {
+    path: ['endTime'],
+    message: 'End time must be after start time',
+  });
+
+type BookingFormValues = z.infer<typeof bookingSchema>;
+
 export default function SlotDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
+  const { token } = useAuth();
   const [slot, setSlot] = useState<Slot | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [startTime, setStartTime] = useState('');
-  const [endTime, setEndTime] = useState('');
-  const [isBooking, setIsBooking] = useState(false);
-  const [bookingError, setBookingError] = useState<string | null>(null);
+  const {
+    register,
+    handleSubmit,
+    watch,
+    formState: { errors, isSubmitting },
+  } = useForm<BookingFormValues>({
+    resolver: zodResolver(bookingSchema),
+    defaultValues: {
+      startTime: '',
+      endTime: '',
+    },
+  });
+
+  const startTime = watch('startTime');
+  const endTime = watch('endTime');
 
   useEffect(() => {
     const fetchSlot = async () => {
@@ -59,40 +88,35 @@ export default function SlotDetailsPage({ params }: { params: Promise<{ id: stri
     fetchSlot();
   }, [id]);
 
-  const calculatePrice = () => {
-    if (!startTime || !endTime || !slot) return 0;
+  const { durationHours, totalPrice } = useMemo(() => {
+    if (!startTime || !endTime || !slot) {
+      return { durationHours: 0, totalPrice: 0 };
+    }
     const start = new Date(startTime).getTime();
     const end = new Date(endTime).getTime();
     const hours = (end - start) / (1000 * 60 * 60);
-    const pricePerHour = typeof slot?.pricePerHour === 'number' ? slot.pricePerHour : 5; // Default to $5/hour
-    return hours > 0 ? hours * pricePerHour : 0;
-  };
+    const pricePerHour = typeof slot?.pricePerHour === 'number' ? slot.pricePerHour : 5;
+    return {
+      durationHours: hours > 0 ? hours : 0,
+      totalPrice: hours > 0 ? hours * pricePerHour : 0,
+    };
+  }, [startTime, endTime, slot]);
 
-  const handleBooking = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setBookingError(null);
-
-    if (!startTime || !endTime) {
-      setBookingError('Please select both start and end times');
+  const onSubmit = async (values: BookingFormValues) => {
+    if (!token) {
+      toast.error('Please log in to book a slot.');
+      router.push('/auth/login');
       return;
     }
-
-    if (new Date(startTime) >= new Date(endTime)) {
-      setBookingError('End time must be after start time');
-      return;
-    }
-
-    setIsBooking(true);
-
     try {
-      const startIso = new Date(startTime).toISOString();
-      const endIso = new Date(endTime).toISOString();
+      const startIso = new Date(values.startTime).toISOString();
+      const endIso = new Date(values.endTime).toISOString();
 
       const response = await fetch('/api/bookings', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           slotId: id,
@@ -101,16 +125,15 @@ export default function SlotDetailsPage({ params }: { params: Promise<{ id: stri
         }),
       });
 
+      const data = await response.json();
       if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.message || 'Failed to create booking');
+        throw new Error(data.error?.message || 'Failed to create booking');
       }
 
-      router.push('/bookings?success=Booking created successfully!');
+      toast.success('Booking created successfully!');
+      router.push('/bookings');
     } catch (err) {
-      setBookingError(err instanceof Error ? err.message : 'An error occurred');
-    } finally {
-      setIsBooking(false);
+      toast.error(err instanceof Error ? err.message : 'Failed to create booking');
     }
   };
 
@@ -205,70 +228,54 @@ export default function SlotDetailsPage({ params }: { params: Promise<{ id: stri
         <div className="bg-white rounded-lg shadow-lg p-8">
           <h2 className="text-2xl font-bold text-gray-900 mb-6">Make a Reservation</h2>
 
-          <form onSubmit={handleBooking} className="space-y-6">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Start Time</label>
               <input
                 type="datetime-local"
-                value={startTime}
-                onChange={(e) => setStartTime(e.target.value)}
+                {...register('startTime')}
                 required
                 min={new Date().toISOString().slice(0, 16)}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
               />
+              {errors.startTime && (
+                <p className="text-sm text-red-600 mt-1">{errors.startTime.message}</p>
+              )}
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">End Time</label>
               <input
                 type="datetime-local"
-                value={endTime}
-                onChange={(e) => setEndTime(e.target.value)}
+                {...register('endTime')}
                 required
                 min={startTime || new Date().toISOString().slice(0, 16)}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
               />
+              {errors.endTime && (
+                <p className="text-sm text-red-600 mt-1">{errors.endTime.message}</p>
+              )}
             </div>
 
             {startTime && endTime && (
               <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
                 <div className="flex justify-between items-center">
                   <span className="text-gray-600">Duration</span>
-                  <span className="font-bold text-gray-900">
-                    {(() => {
-                      const duration =
-                        (new Date(endTime).getTime() - new Date(startTime).getTime()) /
-                        (1000 * 60 * 60);
-                      return typeof duration === 'number' ? duration.toFixed(1) : '0';
-                    })()}{' '}
-                    hours
-                  </span>
+                  <span className="font-bold text-gray-900">{durationHours.toFixed(1)} hours</span>
                 </div>
                 <div className="flex justify-between items-center mt-2 pt-2 border-t border-gray-300">
                   <span className="text-gray-600">Total Price</span>
-                  <span className="text-2xl font-bold text-gray-900">
-                    $
-                    {(() => {
-                      const price = calculatePrice();
-                      return typeof price === 'number' ? price.toFixed(2) : '0.00';
-                    })()}
-                  </span>
+                  <span className="text-2xl font-bold text-gray-900">${totalPrice.toFixed(2)}</span>
                 </div>
-              </div>
-            )}
-
-            {bookingError && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700 text-sm">
-                {bookingError}
               </div>
             )}
 
             <button
               type="submit"
-              disabled={isBooking || !startTime || !endTime}
+              disabled={isSubmitting || !startTime || !endTime}
               className="w-full bg-blue-600 text-white py-3 rounded-lg font-bold hover:bg-blue-700 transition disabled:bg-gray-400 disabled:cursor-not-allowed"
             >
-              {isBooking ? 'Creating Booking...' : 'Confirm Booking'}
+              {isSubmitting ? 'Creating Booking...' : 'Confirm Booking'}
             </button>
           </form>
         </div>
