@@ -1,5 +1,8 @@
 import { NextRequest } from 'next/server';
-import { errorResponse, paginatedResponse } from '@/lib/apiResponse';
+import { paginatedResponse } from '@/lib/apiResponse';
+import { prisma } from '@/lib/prisma';
+import { getOrSetCache } from '@/lib/redis';
+import { withErrorHandler } from '@/lib/errorHandler';
 
 /**
  * GET /api/slots?status=AVAILABLE&row=1&column=5
@@ -12,42 +15,56 @@ import { errorResponse, paginatedResponse } from '@/lib/apiResponse';
  * - limit: Number of results (default 50)
  * - offset: Pagination offset (default 0)
  */
-export async function GET(request: NextRequest) {
-  try {
-    const searchParams = request.nextUrl.searchParams;
-    const _status = searchParams.get('status');
-    const _row = searchParams.get('row');
-    const _column = searchParams.get('column');
-    const limit = searchParams.get('limit') || '50';
-    const offset = searchParams.get('offset') || '0';
+export const GET = withErrorHandler(async (request: NextRequest) => {
+  const searchParams = request.nextUrl.searchParams;
+  const status = searchParams.get('status');
+  const row = searchParams.get('row');
+  const column = searchParams.get('column');
+  const limit = parseInt(searchParams.get('limit') || '50');
+  const offset = parseInt(searchParams.get('offset') || '0');
 
-    // TODO: Implement slot listing logic
-    // - Query database with filters
-    // - Apply pagination
-    // - Return slots with status and location info
+  // Build cache key based on query parameters
+  const cacheKey = `slots:${status || 'all'}:${row || 'all'}:${column || 'all'}:${limit}:${offset}`;
 
-    return paginatedResponse(
-      [
-        {
-          id: 'slot-1',
-          row: 1,
-          column: 1,
-          status: 'AVAILABLE',
-        },
-        {
-          id: 'slot-2',
-          row: 1,
-          column: 2,
-          status: 'OCCUPIED',
-        },
-      ],
-      50,
-      parseInt(limit),
-      parseInt(offset),
-      200
-    );
-  } catch (error) {
-    console.error('Get slots error:', error);
-    return errorResponse('Internal server error', 500);
-  }
-}
+  // Use cache with 30 second TTL
+  const result = await getOrSetCache(
+    cacheKey,
+    async () => {
+      // Build where clause for filters
+      const where: { status?: string; row?: number; column?: number } = {};
+      if (status) {
+        where.status = status;
+      }
+      if (row) {
+        where.row = parseInt(row);
+      }
+      if (column) {
+        where.column = parseInt(column);
+      }
+
+      // Query database with pagination
+      const [slots, total] = await Promise.all([
+        prisma.parkingSlot.findMany({
+          where,
+          take: limit,
+          skip: offset,
+          orderBy: [{ row: 'asc' }, { column: 'asc' }],
+          select: {
+            id: true,
+            row: true,
+            column: true,
+            status: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        }),
+        prisma.parkingSlot.count({ where }),
+      ]);
+
+      return { slots, total, limit, offset };
+    },
+    30 // 30 seconds TTL
+  );
+
+  return paginatedResponse(result.slots, result.total, result.limit, result.offset, 200);
+}, 'GET /api/slots');

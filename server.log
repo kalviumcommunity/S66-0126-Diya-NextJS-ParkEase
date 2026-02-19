@@ -1,0 +1,254 @@
+
+> parkease@0.1.0 dev
+> next dev
+
+▲ Next.js 16.1.6 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://10.180.109.238:3000
+- Environments: .env.local
+
+✓ Starting...
+✓ Ready in 979ms
+ GET / 200 in 803ms (compile: 528ms, render: 275ms)
+Redis connection error: 
+Redis connection closed
+Failed to connect to Redis: Connection is closed.
+Redis connection error: 
+Redis connection closed
+Redis connection error: 
+Redis connection closed
+Redis connection error: 
+Redis connection closed
+Cache error: MaxRetriesPerRequestError: Reached the max retries per request limit (which is 3). Refer to "maxRetriesPerRequest" option for details.
+    at ignore-listed frames
+prisma:query SELECT COUNT(*) FROM (SELECT "public"."parking_slots"."id" FROM "public"."parking_slots" WHERE 1=1 OFFSET $1) AS "sub"
+prisma:query SELECT "public"."parking_slots"."id", "public"."parking_slots"."row", "public"."parking_slots"."column", "public"."parking_slots"."status"::text, "public"."parking_slots"."created_at", "public"."parking_slots"."updated_at" FROM "public"."parking_slots" WHERE 1=1 ORDER BY "public"."parking_slots"."row" ASC, "public"."parking_slots"."column" ASC LIMIT $1 OFFSET $2
+ GET /api/slots?limit=2 200 in 554ms (compile: 101ms, render: 453ms)
+Redis connection error: 
+Redis connection closed
+Redis connection error: 
+Redis connection closed
+Redis connection error: 
+Redis connection closed
+Redis connection error: 
+Redis connection closed
+Redis connection error: 
+Redis connection closed
+Redis connection error: 
+Redis connection closed
+Redis connection error: 
+Redis connection closed
+Redis connection error: 
+Redis connection closed
+Cache error: MaxRetriesPerRequestError: Reached the max retries per request limit (which is 3). Refer to "maxRetriesPerRequest" option for details.
+    at ignore-listed frames
+prisma:query SELECT "public"."parking_slots"."id", "public"."parking_slots"."row", "public"."parking_slots"."column", "public"."parking_slots"."status"::text, "public"."parking_slots"."created_at", "public"."parking_slots"."updated_at" FROM "public"."parking_slots" WHERE 1=1 ORDER BY "public"."parking_slots"."row" ASC, "public"."parking_slots"."column" ASC LIMIT $1 OFFSET $2
+prisma:query SELECT COUNT(*) FROM (SELECT "public"."parking_slots"."id" FROM "public"."parking_slots" WHERE 1=1 OFFSET $1) AS "sub"
+ GET /api/slots?limit=2 200 in 1900ms (compile: 2ms, render: 1897ms)
+Redis connection error: 
+Redis connection closed
+Redis connection error: 
+Redis connection closed
+Redis connection error: 
+Redis connection closed
+Redis connection error: 
+Redis connection closed
+Redis connection error: 
+Redis connection closed
+Redis connection error: 
+Redis connection closed
+Redis connection error: 
+Redis connection closed
+Redis connection error: 
+Redis connection closed
+Redis connection error: 
+Redis connection closed
+Redis connection error: 
+Redis connection closed
+Redis connection error: 
+Redis connection closed
+Redis connection error: 
+Redis connection closed
+Cache error: MaxRetriesPerRequestError: Reached the max retries per request limit (which is 3). Refer to "maxRetriesPerRequest" option for details.
+    at ignore-listed frames
+prisma:query SELECT COUNT(*) FROM (SELECT "public"."parking_slots"."id" FROM "public"."parking_slots" WHERE "public"."parking_slots"."status" = CAST($1::text AS "public"."SlotStatus") OFFSET $2) AS "sub"
+prisma:query SELECT "public"."parking_slots"."id", "public"."parking_slots"."row", "public"."parking_slots"."column", "public"."parking_slots"."status"::text, "public"."parking_slots"."created_at", "public"."parking_slots"."updated_at" FROM "public"."parking_slots" WHERE "public"."parking_slots"."status" = CAST($1::text AS "public"."SlotStatus") ORDER BY "public"."parking_slots"."row" ASC, "public"."parking_slots"."column" ASC LIMIT $2 OFFSET $3
+ GET /api/slots?limit=2&status=AVAILABLE 200 in 3.1s (compile: 1634µs, render: 3.1s)
+Redis connection error: 
+Redis connection closed
+Redis connection error: 
+Redis connection closed
+Redis connection error: 
+Redis connection closed
+Redis connection error: 
+Redis connection closed
+Redis connection error: 
+Redis connection closed
+Redis connection error: 
+Redis connection closed
+Redis connection error: 
+Redis connection closed
+Redis connection error: 
+Redis connection closed
+Cache error: MaxRetriesPerRequestError: Reached the max retries per request limit (which is 3). Refer to "maxRetriesPerRequest" option for details.
+    at ignore-listed frames
+prisma:query SELECT 1
+prisma:query SELECT 1
+prisma:query SELECT COUNT(*) FROM (SELECT "public"."parking_slots"."id" FROM "public"."parking_slots" WHERE "public"."parking_slots"."status" = CAST($1::text AS "public"."SlotStatus") OFFSET $2) AS "sub"
+prisma:query SELECT "public"."parking_slots"."id", "public"."parking_slots"."row", "public"."parking_slots"."column", "public"."parking_slots"."status"::text, "public"."parking_slots"."created_at", "public"."parking_slots"."updated_at" FROM "public"."parking_slots" WHERE "public"."parking_slots"."status" = CAST($1::text AS "public"."SlotStatus") ORDER BY "public"."parking_slots"."row" ASC, "public"."parking_slots"."column" ASC LIMIT $2 OFFSET $3
+ GET /api/slots?limit=1&status=AVAILABLE 200 in 4.4s (compile: 1966µs, render: 4.4s)
+Redis connection error: 
+Redis connection closed
+Redis connection error: 
+Redis connection closed
+Redis connection error: 
+Redis connection closed
+Redis connection error: 
+Redis connection closed
+Cache error: MaxRetriesPerRequestError: Reached the max retries per request limit (which is 3). Refer to "maxRetriesPerRequest" option for details.
+    at ignore-listed frames
+prisma:query SELECT COUNT(*) FROM (SELECT "public"."parking_slots"."id" FROM "public"."parking_slots" WHERE "public"."parking_slots"."status" = CAST($1::text AS "public"."SlotStatus") OFFSET $2) AS "sub"
+prisma:query SELECT "public"."parking_slots"."id", "public"."parking_slots"."row", "public"."parking_slots"."column", "public"."parking_slots"."status"::text, "public"."parking_slots"."created_at", "public"."parking_slots"."updated_at" FROM "public"."parking_slots" WHERE "public"."parking_slots"."status" = CAST($1::text AS "public"."SlotStatus") ORDER BY "public"."parking_slots"."row" ASC, "public"."parking_slots"."column" ASC LIMIT $2 OFFSET $3
+ GET /api/slots?limit=1&status=AVAILABLE 200 in 6.2s (compile: 2ms, render: 6.2s)
+Redis connection error: 
+Redis connection closed
+Redis connection error: 
+Redis connection closed
+Redis connection error: 
+Redis connection closed
+Redis connection error: 
+Redis connection closed
+Cache error: MaxRetriesPerRequestError: Reached the max retries per request limit (which is 3). Refer to "maxRetriesPerRequest" option for details.
+    at ignore-listed frames
+prisma:query SELECT COUNT(*) FROM (SELECT "public"."parking_slots"."id" FROM "public"."parking_slots" WHERE "public"."parking_slots"."status" = CAST($1::text AS "public"."SlotStatus") OFFSET $2) AS "sub"
+prisma:query SELECT "public"."parking_slots"."id", "public"."parking_slots"."row", "public"."parking_slots"."column", "public"."parking_slots"."status"::text, "public"."parking_slots"."created_at", "public"."parking_slots"."updated_at" FROM "public"."parking_slots" WHERE "public"."parking_slots"."status" = CAST($1::text AS "public"."SlotStatus") ORDER BY "public"."parking_slots"."row" ASC, "public"."parking_slots"."column" ASC LIMIT $2 OFFSET $3
+ GET /api/slots?limit=1&status=AVAILABLE 200 in 7.0s (compile: 1626µs, render: 7.0s)
+Redis connection error: 
+Redis connection closed
+Redis connection error: 
+Redis connection closed
+Redis connection error: 
+Redis connection closed
+Redis connection error: 
+Redis connection closed
+Redis connection error: 
+Redis connection closed
+Redis connection error: 
+Redis connection closed
+Redis connection error: 
+Redis connection closed
+Redis connection error: 
+Redis connection closed
+Cache error: MaxRetriesPerRequestError: Reached the max retries per request limit (which is 3). Refer to "maxRetriesPerRequest" option for details.
+    at ignore-listed frames
+prisma:query SELECT 1
+prisma:query SELECT 1
+prisma:query SELECT "public"."parking_slots"."id", "public"."parking_slots"."row", "public"."parking_slots"."column", "public"."parking_slots"."status"::text, "public"."parking_slots"."created_at", "public"."parking_slots"."updated_at" FROM "public"."parking_slots" WHERE "public"."parking_slots"."status" = CAST($1::text AS "public"."SlotStatus") ORDER BY "public"."parking_slots"."row" ASC, "public"."parking_slots"."column" ASC LIMIT $2 OFFSET $3
+prisma:query SELECT COUNT(*) FROM (SELECT "public"."parking_slots"."id" FROM "public"."parking_slots" WHERE "public"."parking_slots"."status" = CAST($1::text AS "public"."SlotStatus") OFFSET $2) AS "sub"
+ GET /api/slots?limit=1&status=AVAILABLE 200 in 7.8s (compile: 1462µs, render: 7.8s)
+Redis connection error: 
+Redis connection closed
+Redis connection error: 
+Redis connection closed
+Redis connection error: 
+Redis connection closed
+Redis connection error: 
+Redis connection closed
+Redis connection error: 
+Redis connection closed
+Redis connection error: 
+Redis connection closed
+Redis connection error: 
+Redis connection closed
+Redis connection error: 
+Redis connection closed
+Redis connection error: 
+Redis connection closed
+Redis connection error: 
+Redis connection closed
+Redis connection error: 
+Redis connection closed
+Redis connection error: 
+Redis connection closed
+Redis connection error: 
+Redis connection closed
+Redis connection error: 
+Redis connection closed
+Redis connection error: 
+Redis connection closed
+Redis connection error: 
+Redis connection closed
+Cache error: MaxRetriesPerRequestError: Reached the max retries per request limit (which is 3). Refer to "maxRetriesPerRequest" option for details.
+    at ignore-listed frames
+prisma:query SELECT 1
+prisma:query SELECT 1
+prisma:query SELECT COUNT(*) FROM (SELECT "public"."parking_slots"."id" FROM "public"."parking_slots" WHERE "public"."parking_slots"."status" = CAST($1::text AS "public"."SlotStatus") OFFSET $2) AS "sub"
+prisma:query SELECT "public"."parking_slots"."id", "public"."parking_slots"."row", "public"."parking_slots"."column", "public"."parking_slots"."status"::text, "public"."parking_slots"."created_at", "public"."parking_slots"."updated_at" FROM "public"."parking_slots" WHERE "public"."parking_slots"."status" = CAST($1::text AS "public"."SlotStatus") ORDER BY "public"."parking_slots"."row" ASC, "public"."parking_slots"."column" ASC LIMIT $2 OFFSET $3
+ GET /api/slots?limit=1&status=AVAILABLE 200 in 971ms (compile: 3ms, render: 968ms)
+Redis connection error: 
+Redis connection closed
+Redis connection error: 
+Redis connection closed
+Redis connection error: 
+Redis connection closed
+Redis connection error: 
+Redis connection closed
+Redis connection error: 
+Redis connection closed
+Redis connection error: 
+Redis connection closed
+Redis connection error: 
+Redis connection closed
+Redis connection error: 
+Redis connection closed
+Redis connection error: 
+Redis connection closed
+Redis connection error: 
+Redis connection closed
+Redis connection error: 
+Redis connection closed
+Redis connection error: 
+Redis connection closed
+Redis connection error: 
+Redis connection closed
+Redis connection error: 
+Redis connection closed
+Redis connection error: 
+Redis connection closed
+Redis connection error: 
+Redis connection closed
+Redis connection error: 
+Redis connection closed
+Redis connection error: 
+Redis connection closed
+Redis connection error: 
+Redis connection closed
+Redis connection error: 
+Redis connection closed
+Redis connection error: 
+Redis connection closed
+Redis connection error: 
+Redis connection closed
+Redis connection error: 
+Redis connection closed
+Redis connection error: 
+Redis connection closed
+Redis connection error: 
+Redis connection closed
+Redis connection error: 
+Redis connection closed
+Redis connection error: 
+Redis connection closed
+Redis connection error: 
+Redis connection closed
+Redis connection error: 
+Redis connection closed
+✓ Redis connected successfully
+Cache MISS: slots:AVAILABLE:all:all:1:0
+prisma:query SELECT 1
+prisma:query SELECT 1
+prisma:query SELECT "public"."parking_slots"."id", "public"."parking_slots"."row", "public"."parking_slots"."column", "public"."parking_slots"."status"::text, "public"."parking_slots"."created_at", "public"."parking_slots"."updated_at" FROM "public"."parking_slots" WHERE "public"."parking_slots"."status" = CAST($1::text AS "public"."SlotStatus") ORDER BY "public"."parking_slots"."row" ASC, "public"."parking_slots"."column" ASC LIMIT $2 OFFSET $3
+prisma:query SELECT COUNT(*) FROM (SELECT "public"."parking_slots"."id" FROM "public"."parking_slots" WHERE "public"."parking_slots"."status" = CAST($1::text AS "public"."SlotStatus") OFFSET $2) AS "sub"
+ GET /api/slots?limit=1&status=AVAILABLE 200 in 15ms (compile: 4ms, render: 11ms)
+Cache HIT: slots:AVAILABLE:all:all:1:0
+ GET /api/slots?limit=1&status=AVAILABLE 200 in 5ms (compile: 1774µs, render: 3ms)

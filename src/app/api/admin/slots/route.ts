@@ -2,6 +2,7 @@ import { successResponse, errorResponse } from '@/lib/apiResponse';
 import { updateSlotSchema } from '@/lib/validations/slot';
 import { withAuth, AuthenticatedRequest } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { invalidateCachePattern } from '@/lib/redis';
 
 /**
  * PUT /api/admin/slots
@@ -45,6 +46,9 @@ export const PUT = withAuth(['ADMIN'], async (request: AuthenticatedRequest) => 
       where: { id: slotId },
       data: { status },
     });
+
+    // Invalidate slots cache after status change
+    await invalidateCachePattern('slots:*');
 
     return successResponse(
       {

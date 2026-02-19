@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { successResponse, errorResponse } from '@/lib/apiResponse';
 import { bookParkingSlot, isSlotAvailable } from '@/lib/bookingService';
 import { createBookingSchema } from '@/lib/validations/booking';
+import { invalidateCachePattern } from '@/lib/redis';
 
 /**
  * POST /api/bookings - Create a new booking
@@ -43,6 +44,9 @@ export async function POST(request: NextRequest) {
     if (!result.success) {
       return errorResponse(result.error || 'Booking failed', 409, 'BOOKING_FAILED');
     }
+
+    // Invalidate slots cache after booking creation
+    await invalidateCachePattern('slots:*');
 
     return successResponse(result, 201);
   } catch (error) {
