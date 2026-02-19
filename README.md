@@ -5,6 +5,7 @@ A modern, full-stack parking management platform built with Next.js, TypeScript,
 ## Table of Contents
 - [Prerequisites](#prerequisites)
 - [Project Setup](#project-setup)
+- [Docker Setup](#docker-setup)
 - [Environment Variables](#environment-variables)
 - [Development](#development)
 - [Project Structure](#project-structure)
@@ -36,15 +37,81 @@ cd parkease
 npm install
 ```
 
-### 2. Environment Variables Setup
+## Docker Setup
 
-#### Step 1: Create Local Environment File
+### Quick Start with Docker
+
+Run the entire stack (Next.js app, PostgreSQL, Redis) with one command:
+
+```bash
+# Start all services
+docker-compose up -d
+
+# Verify services are running
+docker-compose ps
+
+# View logs
+docker-compose logs -f app
+```
+
+**Access the app**: http://localhost:3000
+
+### Services
+
+- **App** (Next.js): http://localhost:3000
+- **Database** (PostgreSQL): localhost:5432
+- **Cache** (Redis): localhost:6379
+
+### Docker Environment
+
+```bash
+# Copy Docker environment template
+cp .env.docker .env.docker.local
+
+# Edit environment (optional, defaults are configured)
+nano .env.docker.local
+```
+
+### Common Docker Commands
+
+```bash
+# Start services
+docker-compose up -d
+
+# Stop services
+docker-compose stop
+
+# Stop and remove containers (keep data)
+docker-compose down
+
+# Stop and remove everything including volumes
+docker-compose down -v
+
+# View logs
+docker-compose logs -f
+
+# Access database
+docker-compose exec db psql -U parkease -d parkease_dev
+
+# Access Redis CLI
+docker-compose exec redis redis-cli
+
+# Run npm commands in container
+docker-compose exec app npm run build
+docker-compose exec app npm run lint
+```
+
+**See [DOCKER_SETUP.md](./DOCKER_SETUP.md) for comprehensive Docker guide**
+
+## Environment Variables
+
+### Step 1: Create Local Environment File
 
 ```bash
 cp .env.example .env.local
 ```
 
-#### Step 2: Configure .env.local
+### Step 2: Configure .env.local
 
 Edit `.env.local` and fill in the required values:
 
@@ -74,7 +141,7 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 NODE_ENV=development
 ```
 
-### 3. Environment Variable Guidelines
+### Environment Variable Guidelines
 
 #### Client-Side Variables (Exposed to Browser)
 Only variables prefixed with `NEXT_PUBLIC_` are exposed to the client:
