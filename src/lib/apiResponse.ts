@@ -36,12 +36,14 @@ export function successResponse<T>(
  * @param message - Error message
  * @param statusCode - HTTP status code (default: 500)
  * @param code - Optional error code for client handling
+ * @param details - Optional additional error details (e.g., stack trace in development)
  * @returns NextResponse with error structure
  */
 export function errorResponse(
   message: string,
   statusCode: number = 500,
-  code?: string
+  code?: string,
+  details?: unknown
 ): NextResponse<ApiResponse> {
   return NextResponse.json(
     {
@@ -49,6 +51,7 @@ export function errorResponse(
       error: {
         message,
         ...(code && { code }),
+        ...(details && { details }),
       },
     },
     { status: statusCode }
