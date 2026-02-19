@@ -1,46 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-
-interface Booking {
-  id: string;
-  slotId: string;
-  slot?: {
-    row: number;
-    column: number;
-  };
-  startTime: string;
-  endTime: string;
-  status: 'ACTIVE' | 'COMPLETED' | 'CANCELLED' | 'CONFIRMED' | 'PENDING';
-  createdAt: string;
-}
+import { useBookings } from '@/hooks/useBookings';
 
 export default function BookingsPage() {
-  const [bookings, setBookings] = useState<Booking[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const fetchBookings = async () => {
-      try {
-        const response = await fetch('/api/bookings', {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
-          },
-        });
-
-        if (!response.ok) throw new Error('Failed to fetch bookings');
-        const data = await response.json();
-        setBookings(data.data?.items || []);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'An error occurred');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchBookings();
-  }, []);
+  const { bookings, isLoading, error } = useBookings();
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -74,7 +37,9 @@ export default function BookingsPage() {
     return (
       <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
         <h2 className="text-xl font-bold text-red-900 mb-2">Error Loading Bookings</h2>
-        <p className="text-red-700">{error}</p>
+        <p className="text-red-700">
+          {error instanceof Error ? error.message : 'An error occurred'}
+        </p>
       </div>
     );
   }

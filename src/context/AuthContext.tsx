@@ -11,6 +11,7 @@ export interface AuthUser {
 
 interface AuthContextValue {
   user: AuthUser | null;
+  token: string | null;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   signup: (email: string, password: string, name: string) => Promise<void>;
@@ -38,6 +39,7 @@ function decodeToken(token: string): AuthUser | null {
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
+  const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   const loadFromStorage = useCallback(() => {
@@ -53,6 +55,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       localStorage.removeItem(TOKEN_KEY);
       localStorage.removeItem('refreshToken');
       localStorage.removeItem(USER_KEY);
+      setToken(null);
       setUser(null);
       setIsLoading(false);
       return;
@@ -63,6 +66,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       localStorage.removeItem(TOKEN_KEY);
       localStorage.removeItem('refreshToken');
       localStorage.removeItem(USER_KEY);
+      setToken(null);
       setUser(null);
       setIsLoading(false);
       return;
@@ -79,6 +83,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } else {
       setUser(decoded);
     }
+    setToken(token);
     setIsLoading(false);
   }, []);
 
@@ -108,6 +113,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     localStorage.setItem(TOKEN_KEY, accessToken);
     localStorage.setItem(USER_KEY, JSON.stringify(userInfo));
+    setToken(accessToken);
     setUser(userInfo);
     setIsLoading(false);
   }, []);
@@ -140,18 +146,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem('refreshToken');
     localStorage.removeItem(USER_KEY);
+    setToken(null);
     setUser(null);
   }, []);
 
   const value = useMemo(
     () => ({
       user,
+      token,
       isLoading,
       login,
       signup,
       logout,
     }),
-    [user, isLoading, login, signup, logout]
+    [user, token, isLoading, login, signup, logout]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

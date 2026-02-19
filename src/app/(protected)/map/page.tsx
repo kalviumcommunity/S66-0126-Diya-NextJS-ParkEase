@@ -1,42 +1,10 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
-
-interface ParkingSlot {
-  id: string;
-  row: number;
-  column: number;
-  status: 'AVAILABLE' | 'OCCUPIED' | 'RESERVED';
-  pricePerHour: number;
-}
+import { useSlots } from '@/hooks/useSlots';
 
 export default function MapPage() {
-  const [slots, setSlots] = useState<ParkingSlot[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const fetchSlots = async () => {
-      try {
-        const response = await fetch('/api/slots', {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
-          },
-        });
-
-        if (!response.ok) throw new Error('Failed to fetch slots');
-        const data = await response.json();
-        setSlots(data.data?.items || []);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'An error occurred');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchSlots();
-  }, []);
+  const { slots, isLoading, error } = useSlots();
 
   if (isLoading) {
     return (
@@ -53,7 +21,9 @@ export default function MapPage() {
     return (
       <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
         <h2 className="text-xl font-bold text-red-900 mb-2">Error Loading Parking Spaces</h2>
-        <p className="text-red-700">{error}</p>
+        <p className="text-red-700">
+          {error instanceof Error ? error.message : 'An error occurred'}
+        </p>
       </div>
     );
   }
