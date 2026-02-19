@@ -66,21 +66,49 @@ export async function POST(request: NextRequest) {
 }
 
 /**
- * GET /api/bookings/availability?slotId=xxx&startTime=xxx&endTime=xxx
- * Check if a slot is available for a given time period
+ * GET /api/bookings
+ * Two modes:
+ * 1. Get user's bookings: GET /api/bookings?userId=xxx (requires auth)
+ * 2. Check availability: GET /api/bookings?slotId=xxx&startTime=xxx&endTime=xxx
  */
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
+    const userId = searchParams.get('userId');
     const slotId = searchParams.get('slotId');
     const startTime = searchParams.get('startTime');
     const endTime = searchParams.get('endTime');
 
+    // Mode 1: Get user's bookings
+    if (userId && !slotId) {
+      // TODO: Implement get user bookings logic
+      // - Verify authentication and ensure userId matches current user (or is admin)
+      // - Query all bookings for the user
+      // - Filter by status if needed
+      // - Return paginated list of user's bookings
+
+      return NextResponse.json(
+        {
+          success: true,
+          message: 'Get user bookings',
+          data: {
+            userId,
+            bookings: [],
+            total: 0,
+            message: 'TODO: Implement user bookings retrieval',
+          },
+        },
+        { status: 200 }
+      );
+    }
+
+    // Mode 2: Check availability
     if (!slotId || !startTime || !endTime) {
       return NextResponse.json(
         {
           success: false,
-          error: 'Missing required query parameters: slotId, startTime, endTime',
+          error:
+            'Missing required query parameters. Use either userId OR (slotId, startTime, endTime)',
         },
         { status: 400 }
       );
