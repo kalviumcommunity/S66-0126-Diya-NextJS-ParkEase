@@ -45,11 +45,6 @@ export async function sendEmail(
 
   try {
     switch (emailService.toLowerCase()) {
-      case 'sendgrid':
-        return await sendViaSendGrid(emailOptions);
-      case 'aws-ses':
-      case 'ses':
-        return await sendViaSES(emailOptions);
       case 'console':
       default:
         return logEmailToConsole(emailOptions);
@@ -58,101 +53,6 @@ export async function sendEmail(
     console.error(`Error sending email via ${emailService}:`, error);
     // Fallback to console logging if service fails
     return logEmailToConsole(emailOptions);
-  }
-}
-
-/**
- * Send email via SendGrid
- */
-async function sendViaSendGrid(options: EmailOptions): Promise<SendEmailResult> {
-  try {
-    let sgMailClient: any;
-    try {
-      // @ts-expect-error - optional dependency
-      const sgMail = await import('@sendgrid/mail');
-      sgMailClient = sgMail.default;
-    } catch {
-      // SendGrid not installed, fall through to console logging
-      throw new Error('SendGrid module not available');
-    }
-
-    if (!process.env.SENDGRID_API_KEY) {
-      throw new Error('SENDGRID_API_KEY environment variable not set');
-    }
-
-    sgMailClient.setApiKey(process.env.SENDGRID_API_KEY);
-
-    const [response] = await sgMailClient.send({
-      to: options.to,
-      from: options.from || 'noreply@parkease.com',
-      subject: options.subject,
-      html: options.html,
-      replyTo: options.replyTo,
-    });
-
-    console.log(`✉️ Email sent via SendGrid to ${options.to}`);
-
-    return {
-      success: true,
-      messageId: response.headers['x-message-id'],
-    };
-  } catch (error) {
-    console.error('SendGrid error:', error);
-    throw error;
-  }
-}
-
-/**
- * Send email via AWS SES
- */
-async function sendViaSES(options: EmailOptions): Promise<SendEmailResult> {
-  try {
-    // @ts-expect-error - optional dependency
-    const { SESClient, SendEmailCommand } = await import('@aws-sdk/client-ses');
-
-    if (!process.env.AWS_ACCESS_KEY_ID || !process.env.AWS_SECRET_ACCESS_KEY) {
-      throw new Error('AWS credentials not configured');
-    }
-
-    const sesClient = new SESClient({
-      region: process.env.AWS_SES_REGION || 'us-east-1',
-      credentials: {
-        accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-      },
-    });
-
-    const command = new SendEmailCommand({
-      Source: options.from || 'noreply@parkease.com',
-      Destination: {
-        ToAddresses: [options.to],
-      },
-      Message: {
-        Subject: {
-          Data: options.subject,
-          Charset: 'UTF-8',
-        },
-        Body: {
-          Html: {
-            Data: options.html,
-            Charset: 'UTF-8',
-          },
-        },
-      },
-      ReplyToAddresses: options.replyTo ? [options.replyTo] : undefined,
-    });
-
-    const response = await sesClient.send(command);
-
-    console.log(`✉️ Email sent via AWS SES to ${options.to}`);
-
-    return {
-      success: true,
-      messageId: response.MessageId,
-    };
-  } catch (error) {
-    console.error('AWS SES error:', error);
-    throw error;
   }
 }
 
