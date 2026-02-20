@@ -4,9 +4,10 @@ import { cancelBooking } from '@/lib/bookingService';
 /**
  * PUT /api/bookings/[id]/cancel - Cancel a booking
  */
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const bookingId = params.id;
+    const { id } = await params;
+    const bookingId = id;
 
     if (!bookingId) {
       return NextResponse.json(

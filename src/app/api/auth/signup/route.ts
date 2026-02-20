@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma';
 import { sendEmail, getWelcomeEmailHtml } from '@/lib/email';
 import bcrypt from 'bcryptjs';
 import { withErrorHandler } from '@/lib/errorHandler';
+import { sanitizeString } from '@/lib/sanitize';
 
 /**
  * POST /api/auth/signup
@@ -30,6 +31,10 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
   }
 
   const { email, password, name } = validation.data;
+  const sanitizedName = sanitizeString(name);
+  if (!sanitizedName) {
+    return errorResponse('Name is required', 400, 'INVALID_NAME');
+  }
 
   // Check if user already exists
   const existingUser = await prisma.user.findUnique({
@@ -48,7 +53,7 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
     data: {
       email,
       passwordHash,
-      name,
+      name: sanitizedName,
       role: 'USER',
     },
     select: {

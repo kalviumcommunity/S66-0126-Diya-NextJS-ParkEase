@@ -5,13 +5,14 @@ import { useBookings } from '@/hooks/useBookings';
 import { mutate as globalMutate } from 'swr';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
+import { secureFetch } from '@/lib/secureFetch';
 import Modal from '@/components/ui/Modal';
 import BookingsLoadingSkeleton from '@/components/ui/BookingsLoadingSkeleton';
 import ErrorFallback from '@/components/ui/ErrorFallback';
 
 export default function BookingsPage() {
   const { bookings, isLoading, error, mutate } = useBookings();
-  const { token } = useAuth();
+  const { user } = useAuth();
   const { success, error: toastError } = useToast();
   const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null);
   const [isCancelling, setIsCancelling] = useState(false);
@@ -19,13 +20,16 @@ export default function BookingsPage() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'ACTIVE':
-        return 'bg-green-100 text-green-800';
+        return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400';
       case 'COMPLETED':
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300';
       case 'CANCELLED':
-        return 'bg-red-100 text-red-800';
+        return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400';
+      case 'CONFIRMED':
+      case 'PENDING':
+        return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400';
       default:
-        return 'bg-blue-100 text-blue-800';
+        return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400';
     }
   };
 
@@ -33,22 +37,24 @@ export default function BookingsPage() {
     return new Date(dateString).toLocaleString();
   };
 
+  const isBookingInPast = (endTime: string): boolean => {
+    return new Date(endTime) < new Date();
+  };
+
   const canCancel = (status: string) =>
     status === 'PENDING' || status === 'CONFIRMED' || status === 'ACTIVE';
 
   const handleCancelBooking = async () => {
     if (!selectedBookingId) return;
-    if (!token) {
+    if (!user) {
       toastError('Please log in to cancel a booking.');
       return;
     }
     setIsCancelling(true);
     try {
-      const response = await fetch(`/api/bookings/${selectedBookingId}`, {
+      const response = await secureFetch(`/api/bookings/${selectedBookingId}`, {
         method: 'DELETE',
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        credentials: 'include',
       });
 
       const data = await response.json().catch(() => ({}));
@@ -106,6 +112,104 @@ export default function BookingsPage() {
     );
   }
 
+  // Separate bookings into upcoming and past
+  const upcomingBookings = bookings.filter((b) => !isBookingInPast(b.endTime));
+  const pastBookings = bookings.filter((b) => isBookingInPast(b.endTime));
+
+  const BookingCard = ({
+    booking,
+    isPast = false,
+  }: {
+    booking: typeof bookings[0];
+    isPast?: boolean;
+  }) => {
+    try {
+      const startDate = booking.startTime ? new Date(booking.startTime) : null;
+      const endDate = booking.endTime ? new Date(booking.endTime) : null;
+
+      let durationHours = 0;
+      if (startDate && endDate && !isNaN(startDate.getTime()) && !isNaN(endDate.getTime())) {
+        durationHours = (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60);
+      }
+
+      const pricePerHour = 5;
+      const totalPrice = typeof durationHours === 'number' ? durationHours * pricePerHour : 0;
+
+      return (
+        <div
+          className={`rounded-lg shadow-md p-6 border-l-4 transition ${
+            isPast
+              ? 'bg-gray-50 dark:bg-gray-900 border-gray-300 dark:border-gray-600 opacity-75'
+              : 'bg-white dark:bg-gray-800 border-green-500 dark:border-green-600 hover:shadow-lg'
+          }`}
+        >
+          <div className="grid md:grid-cols-2 gap-6">
+            <div>
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">
+                Slot {booking.slot?.row || 'N/A'}-{booking.slot?.column || 'N/A'}
+              </h3>
+              <div className="space-y-2">
+                <div>
+                  <span className="text-gray-600 dark:text-gray-400 text-sm">Start Time:</span>
+                  <p className="text-gray-900 dark:text-white font-medium">
+                    {booking.startTime ? formatDateTime(booking.startTime) : 'N/A'}
+                  </p>
+                </div>
+                <div>
+                  <span className="text-gray-600 dark:text-gray-400 text-sm">End Time:</span>
+                  <p className="text-gray-900 dark:text-white font-medium">
+                    {booking.endTime ? formatDateTime(booking.endTime) : 'N/A'}
+                  </p>
+                </div>
+                <div>
+                  <span className="text-gray-600 dark:text-gray-400 text-sm">Duration:</span>
+                  <p className="text-gray-900 dark:text-white font-medium">
+                    {typeof durationHours === 'number' ? durationHours.toFixed(1) : '0'} hours
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="text-right">
+              <div className="mb-4">
+                <span
+                  className={`inline-block px-4 py-2 rounded-full text-sm font-bold ${getStatusColor(
+                    booking.status || 'COMPLETED'
+                  )}`}
+                >
+                  {booking.status || 'COMPLETED'}
+                </span>
+              </div>
+              {!isPast && canCancel(booking.status) && (
+                <div className="mb-4">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedBookingId(booking.id)}
+                    className="text-sm font-medium text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+                  >
+                    Cancel Booking
+                  </button>
+                </div>
+              )}
+              <div>
+                <span className="text-gray-600 dark:text-gray-400 text-sm">Total Price:</span>
+                <p
+                  className={`text-2xl font-bold ${
+                    isPast ? 'text-gray-600 dark:text-gray-400' : 'text-green-600 dark:text-green-400'
+                  }`}
+                >
+                  ${totalPrice.toFixed(2)}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    } catch {
+      return null;
+    }
+  };
+
   return (
     <div>
       <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">My Bookings</h1>
@@ -113,101 +217,36 @@ export default function BookingsPage() {
         Manage and track your parking reservations
       </p>
 
-      <div className="grid gap-4">
-        {bookings.map((booking) => {
-          try {
-            // Safely parse dates
-            const startDate = booking.startTime ? new Date(booking.startTime) : null;
-            const endDate = booking.endTime ? new Date(booking.endTime) : null;
+      {/* UPCOMING BOOKINGS SECTION */}
+      {upcomingBookings.length > 0 && (
+        <div className="mb-12">
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4 flex items-center">
+            <span className="w-2 h-2 bg-green-500 rounded-full mr-3"></span>
+            Upcoming Bookings
+          </h2>
+          <div className="grid gap-4">
+            {upcomingBookings.map((booking) => (
+              <BookingCard key={booking.id} booking={booking} isPast={false} />
+            ))}
+          </div>
+        </div>
+      )}
 
-            // Calculate duration with safety check
-            let durationHours = 0;
-            if (startDate && endDate && !isNaN(startDate.getTime()) && !isNaN(endDate.getTime())) {
-              durationHours = (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60);
-            }
+      {/* PAST BOOKINGS SECTION */}
+      {pastBookings.length > 0 && (
+        <div className="mb-12">
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4 flex items-center">
+            <span className="w-2 h-2 bg-gray-400 rounded-full mr-3"></span>
+            Past Bookings
+          </h2>
+          <div className="grid gap-4">
+            {pastBookings.map((booking) => (
+              <BookingCard key={booking.id} booking={booking} isPast={true} />
+            ))}
+          </div>
+        </div>
+      )}
 
-            const pricePerHour = 5; // Default pricing
-            const totalPrice = typeof durationHours === 'number' ? durationHours * pricePerHour : 0;
-
-            return (
-              <div
-                key={booking.id}
-                className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 border-l-4 border-blue-600 dark:border-blue-500"
-              >
-                <div className="grid md:grid-cols-2 gap-6">
-                  <div>
-                    <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">
-                      Slot {booking.slot?.row || 'N/A'}-{booking.slot?.column || 'N/A'}
-                    </h3>
-                    <div className="space-y-2">
-                      <div>
-                        <span className="text-gray-600 dark:text-gray-400 text-sm">
-                          Start Time:
-                        </span>
-                        <p className="text-gray-900 dark:text-white font-medium">
-                          {booking.startTime ? formatDateTime(booking.startTime) : 'N/A'}
-                        </p>
-                      </div>
-                      <div>
-                        <span className="text-gray-600 dark:text-gray-400 text-sm">End Time:</span>
-                        <p className="text-gray-900 dark:text-white font-medium">
-                          {booking.endTime ? formatDateTime(booking.endTime) : 'N/A'}
-                        </p>
-                      </div>
-                      <div>
-                        <span className="text-gray-600 dark:text-gray-400 text-sm">Duration:</span>
-                        <p className="text-gray-900 dark:text-white font-medium">
-                          {typeof durationHours === 'number' ? durationHours.toFixed(1) : '0'} hours
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="text-right">
-                    <div className="mb-4">
-                      <span
-                        className={`inline-block px-4 py-2 rounded-full text-sm font-bold ${getStatusColor(
-                          booking.status
-                        )}`}
-                      >
-                        {booking.status}
-                      </span>
-                    </div>
-                    {canCancel(booking.status) && (
-                      <div className="mb-4">
-                        <button
-                          type="button"
-                          onClick={() => setSelectedBookingId(booking.id)}
-                          className="text-sm font-medium text-red-600 hover:text-red-700"
-                        >
-                          Cancel Booking
-                        </button>
-                      </div>
-                    )}
-                    <div className="mb-4">
-                      <p className="text-gray-600 dark:text-gray-400 text-sm">Total Price</p>
-                      <p className="text-3xl font-bold text-gray-900 dark:text-white">
-                        ${typeof totalPrice === 'number' ? totalPrice.toFixed(2) : '0.00'}
-                      </p>
-                    </div>
-                    <p className="text-gray-500 dark:text-gray-400 text-xs">
-                      Booked on{' '}
-                      {booking.createdAt ? new Date(booking.createdAt).toLocaleDateString() : 'N/A'}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            );
-          } catch (err) {
-            console.error('Error rendering booking:', err, booking);
-            return (
-              <div key={booking.id} className="bg-red-50 p-4 rounded-lg border border-red-200">
-                <p className="text-red-700">Error displaying booking. Please try again.</p>
-              </div>
-            );
-          }
-        })}
-      </div>
       <Modal
         isOpen={!!selectedBookingId}
         title="Cancel booking?"

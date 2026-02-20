@@ -14,9 +14,9 @@ export interface ParkingSlot {
 }
 
 export function useSlots() {
-  const { token, isLoading: authLoading } = useAuth();
+  const { isLoading: authLoading } = useAuth();
   const fetcher = useAuthFetcher();
-  const { data, error, isLoading, mutate } = useSWR(token ? '/api/slots' : null, fetcher, {
+  const { data, error, isLoading, mutate } = useSWR('/api/slots', fetcher, {
     revalidateOnFocus: true,
     dedupingInterval: 3000, // Reduced from 15000 to allow faster updates after mutations
     keepPreviousData: true,

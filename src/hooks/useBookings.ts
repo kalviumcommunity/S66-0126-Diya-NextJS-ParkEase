@@ -21,9 +21,9 @@ export interface Booking {
 }
 
 export function useBookings() {
-  const { token, isLoading: authLoading } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
   const fetcher = useAuthFetcher();
-  const { data, error, isLoading, mutate } = useSWR(token ? '/api/bookings' : null, fetcher, {
+  const { data, error, isLoading, mutate } = useSWR(user ? '/api/bookings' : null, fetcher, {
     revalidateOnFocus: true,
     dedupingInterval: 15000,
     keepPreviousData: true,
@@ -40,10 +40,10 @@ export function useBookings() {
 }
 
 export function useBooking(id?: string) {
-  const { token, isLoading: authLoading } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
   const fetcher = useAuthFetcher();
   const { data, error, isLoading, mutate } = useSWR(
-    token && id ? `/api/bookings/${id}` : null,
+    user && id ? `/api/bookings/${id}` : null,
     fetcher,
     {
       revalidateOnFocus: true,

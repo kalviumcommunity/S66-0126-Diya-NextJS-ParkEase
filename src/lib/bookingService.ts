@@ -24,6 +24,11 @@ export interface BookingResponse {
     endTime: Date;
     status: BookingStatus;
   };
+  slot?: {
+    id: string;
+    row: number;
+    column: number;
+  };
   error?: string;
 }
 
@@ -82,7 +87,7 @@ export async function bookParkingSlot(request: BookingRequest): Promise<BookingR
 
   try {
     // Run transaction to ensure atomicity and prevent race conditions
-    const booking = await prisma.$transaction(async (tx) => {
+    const { booking, slot } = await prisma.$transaction(async (tx) => {
       // Step 1: Check if slot exists and is AVAILABLE
       const slot = await tx.parkingSlot.findUnique({
         where: { id: slotId },
@@ -136,7 +141,7 @@ export async function bookParkingSlot(request: BookingRequest): Promise<BookingR
         data: { status: SlotStatus.RESERVED },
       });
 
-      return newBooking;
+      return { booking: newBooking, slot };
     });
 
     return {
@@ -148,6 +153,11 @@ export async function bookParkingSlot(request: BookingRequest): Promise<BookingR
         startTime: booking.startTime,
         endTime: booking.endTime,
         status: booking.status,
+      },
+      slot: {
+        id: slot.id,
+        row: slot.row,
+        column: slot.column,
       },
     };
   } catch (error) {
@@ -318,4 +328,142 @@ export async function cancelBooking(bookingId: string): Promise<BookingResponse>
       error: errorMessage,
     };
   }
+}
+
+/**
+ * Mark expired bookings as COMPLETED and release their slots back to AVAILABLE
+ * This should be called periodically or when fetching bookings
+ *
+ * @returns Number of bookings that were completed
+ */
+export async function completeExpiredBookings(): Promise<number> {
+  try {
+    const now = new Date();
+
+    // Find all bookings that have ended but are not yet COMPLETED or CANCELLED
+    const expiredBookings = await prisma.booking.findMany({
+      where: {
+        endTime: {
+          lt: now, // End time is in the past
+        },
+        status: {
+          notIn: [BookingStatus.COMPLETED, BookingStatus.CANCELLED],
+        },
+      },
+      select: {
+        id: true,
+        slotId: true,
+      },
+    });
+
+    if (expiredBookings.length === 0) {
+      return 0;
+    }
+
+    // Update all expired bookings to COMPLETED and their slots to AVAILABLE
+    const result = await prisma.$transaction(async (tx) => {
+      // Update bookings status
+      await tx.booking.updateMany({
+        where: {
+          id: {
+            in: expiredBookings.map((b) => b.id),
+          },
+        },
+        data: {
+          status: BookingStatus.COMPLETED,
+        },
+      });
+
+      // Update slots back to AVAILABLE
+      // Get unique slot IDs
+      const slotIds = [...new Set(expiredBookings.map((b) => b.slotId))];
+
+      // For each slot, check if there are any non-cancelled bookings for it
+      for (const slotId of slotIds) {
+        const hasActiveBookings = await tx.booking.findFirst({
+          where: {
+            slotId,
+            status: {
+              notIn: [BookingStatus.COMPLETED, BookingStatus.CANCELLED],
+            },
+          },
+        });
+
+        // Only set to AVAILABLE if there are no active bookings
+        if (!hasActiveBookings) {
+          await tx.parkingSlot.update({
+            where: { id: slotId },
+            data: { status: SlotStatus.AVAILABLE },
+          });
+        }
+      }
+
+      return expiredBookings.length;
+    });
+
+    return result;
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+    console.error('Error completing expired bookings:', errorMessage);
+    return 0;
+  }
+}
+
+/**
+ * Mark slots as OCCUPIED when their booking start time has passed
+ *
+ * @returns Number of slots updated to OCCUPIED
+ */
+export async function markActiveBookingsAsOccupied(): Promise<number> {
+  try {
+    const now = new Date();
+
+    const activeBookings = await prisma.booking.findMany({
+      where: {
+        startTime: {
+          lte: now,
+        },
+        endTime: {
+          gt: now,
+        },
+        status: {
+          in: [BookingStatus.CONFIRMED, BookingStatus.PENDING],
+        },
+      },
+      select: {
+        slotId: true,
+      },
+    });
+
+    if (activeBookings.length === 0) {
+      return 0;
+    }
+
+    const slotIds = [...new Set(activeBookings.map((b) => b.slotId))];
+
+    const result = await prisma.parkingSlot.updateMany({
+      where: {
+        id: { in: slotIds },
+        status: { not: SlotStatus.OCCUPIED },
+      },
+      data: { status: SlotStatus.OCCUPIED },
+    });
+
+    return result.count;
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+    console.error('Error marking active bookings as occupied:', errorMessage);
+    return 0;
+  }
+}
+
+/**
+ * Check if a booking is in the past (end time has passed)
+ *
+ * @param booking - Booking object with endTime
+ * @returns true if booking end time is in the past
+ */
+export function isBookingInPast(booking: { endTime: Date | string }): boolean {
+  const endTime = typeof booking.endTime === 'string' ? new Date(booking.endTime) : booking.endTime;
+  return endTime < new Date();
 }

@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { paginatedResponse } from '@/lib/apiResponse';
 import { prisma } from '@/lib/prisma';
+import { completeExpiredBookings, markActiveBookingsAsOccupied } from '@/lib/bookingService';
 import { getOrSetCache } from '@/lib/redis';
 import { withErrorHandler } from '@/lib/errorHandler';
 
@@ -16,6 +17,9 @@ import { withErrorHandler } from '@/lib/errorHandler';
  * - offset: Pagination offset (default 0)
  */
 export const GET = withErrorHandler(async (request: NextRequest) => {
+  await completeExpiredBookings();
+  await markActiveBookingsAsOccupied();
+
   const searchParams = request.nextUrl.searchParams;
   const status = searchParams.get('status');
   const row = searchParams.get('row');

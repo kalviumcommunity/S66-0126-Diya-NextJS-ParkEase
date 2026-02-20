@@ -3,6 +3,7 @@ import { successResponse, errorResponse } from '@/lib/apiResponse';
 import { prisma } from '@/lib/prisma';
 import { deleteFile } from '@/lib/s3';
 import { withErrorHandler } from '@/lib/errorHandler';
+import { sanitizeString } from '@/lib/sanitize';
 import { z } from 'zod';
 import jwt from 'jsonwebtoken';
 
@@ -51,19 +52,18 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
   }
 
   // Fetch user profile
-  const userProfile = await prisma.user.findUnique({
+  const userProfile = (await prisma.user.findUnique({
     where: { id: user.userId },
-    select: {
-      id: true,
-      email: true,
-      name: true,
-      role: true,
-      profilePictureUrl: true,
-      profilePictureKey: true,
-      createdAt: true,
-      updatedAt: true,
-    },
-  });
+  })) as unknown as {
+    id: string;
+    email: string;
+    name: string;
+    role: string;
+    profilePictureUrl?: string | null;
+    profilePictureKey?: string | null;
+    createdAt: Date;
+    updatedAt: Date;
+  } | null;
 
   if (!userProfile) {
     return errorResponse('User not found', 404);
@@ -120,10 +120,11 @@ export const PUT = withErrorHandler(async (request: NextRequest) => {
   try {
     // If updating profile picture, delete the old one if it exists
     if (profilePictureUrl && profilePictureKey) {
-      const currentUser = await prisma.user.findUnique({
+      const currentUser = (await prisma.user.findUnique({
         where: { id: user.userId },
-        select: { profilePictureKey: true },
-      });
+      })) as unknown as {
+        profilePictureKey?: string | null;
+      } | null;
 
       // Delete old profile picture from S3 if it exists
       if (currentUser?.profilePictureKey) {
@@ -151,27 +152,39 @@ export const PUT = withErrorHandler(async (request: NextRequest) => {
       updateData.profilePictureKey = profilePictureKey || null;
     }
     if (name !== undefined) {
-      updateData.name = name;
+      const sanitizedName = sanitizeString(name);
+      if (!sanitizedName) {
+        return errorResponse('Name is required', 400, 'INVALID_NAME');
+      }
+      updateData.name = sanitizedName;
     }
 
-    const updatedUser = await prisma.user.update({
+    const updatedUser = (await prisma.user.update({
       where: { id: user.userId },
       data: updateData,
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        role: true,
-        profilePictureUrl: true,
-        profilePictureKey: true,
-        createdAt: true,
-        updatedAt: true,
-      },
-    });
+    })) as unknown as {
+      id: string;
+      email: string;
+      name: string;
+      role: string;
+      profilePictureUrl?: string | null;
+      profilePictureKey?: string | null;
+      createdAt: Date;
+      updatedAt: Date;
+    };
 
     console.log(`Updated profile for user ${user.userId}`);
 
-    return successResponse(updatedUser);
+    return successResponse({
+      id: updatedUser.id,
+      email: updatedUser.email,
+      name: updatedUser.name,
+      role: updatedUser.role,
+      profilePictureUrl: updatedUser.profilePictureUrl,
+      profilePictureKey: updatedUser.profilePictureKey,
+      createdAt: updatedUser.createdAt,
+      updatedAt: updatedUser.updatedAt,
+    });
   } catch (error) {
     console.error('Error updating profile:', error);
     throw error;

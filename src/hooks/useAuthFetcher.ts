@@ -1,21 +1,13 @@
 'use client';
 
 import { useCallback } from 'react';
-import { useAuth } from '@/context/AuthContext';
+import { secureFetch } from '@/lib/secureFetch';
 
 export function useAuthFetcher() {
-  const { token } = useAuth();
-
   return useCallback(
     async (url: string) => {
-      if (!token) {
-        throw new Error('Unauthorized');
-      }
-
-      const response = await fetch(url, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+      const response = await secureFetch(url, {
+        credentials: 'include',
       });
 
       const data = await response.json().catch(() => ({}));
@@ -26,6 +18,6 @@ export function useAuthFetcher() {
 
       return data;
     },
-    [token]
+    []
   );
 }

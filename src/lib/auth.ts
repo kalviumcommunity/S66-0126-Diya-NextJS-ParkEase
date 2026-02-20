@@ -21,10 +21,10 @@ export interface AuthenticatedRequest extends NextRequest {
 /**
  * Middleware function type for authenticated routes
  */
-export type AuthenticatedHandler = (
+export type AuthenticatedHandler<P extends Record<string, string> = Record<string, string>> = (
   request: AuthenticatedRequest,
-  context?: { params: Promise<Record<string, string>> }
-) => Promise<NextResponse>;
+  context?: { params: Promise<P> }
+) => Promise<NextResponse<any>>;
 
 /**
  * Authenticate middleware - Verifies JWT access token from Authorization header
@@ -40,10 +40,12 @@ export type AuthenticatedHandler = (
  * @param handler - The route handler function to wrap
  * @returns Wrapped handler with authentication
  */
-export function authenticate(handler: AuthenticatedHandler): AuthenticatedHandler {
+export function authenticate<P extends Record<string, string> = Record<string, string>>(
+  handler: AuthenticatedHandler<P>
+): AuthenticatedHandler<P> {
   return async (
     request: AuthenticatedRequest,
-    context?: { params: Promise<Record<string, string>> }
+    context?: { params: Promise<P> }
   ) => {
     try {
       // Extract token from Authorization header
@@ -121,13 +123,13 @@ export function authenticate(handler: AuthenticatedHandler): AuthenticatedHandle
  * @param handler - The route handler function to wrap
  * @returns Wrapped handler with authorization check
  */
-export function authorize(
+export function authorize<P extends Record<string, string> = Record<string, string>>(
   requiredRoles: Array<'USER' | 'ADMIN'>,
-  handler: AuthenticatedHandler
-): AuthenticatedHandler {
+  handler: AuthenticatedHandler<P>
+): AuthenticatedHandler<P> {
   return async (
     request: AuthenticatedRequest,
-    context?: { params: Promise<Record<string, string>> }
+    context?: { params: Promise<P> }
   ) => {
     try {
       // Check if user is attached (should be done by authenticate middleware)
@@ -165,9 +167,9 @@ export function authorize(
  * });
  * ```
  */
-export function withAuth(
+export function withAuth<P extends Record<string, string> = Record<string, string>>(
   requiredRoles: Array<'USER' | 'ADMIN'>,
-  handler: AuthenticatedHandler
-): AuthenticatedHandler {
+  handler: AuthenticatedHandler<P>
+): AuthenticatedHandler<P> {
   return authenticate(authorize(requiredRoles, handler));
 }

@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
+import { secureFetch } from '@/lib/secureFetch';
 
 interface Slot {
   id: string;
@@ -31,7 +32,7 @@ type BookingFormValues = z.infer<typeof bookingSchema>;
 export default function SlotDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
-  const { token } = useAuth();
+  const { user } = useAuth();
   const { success, error: toastError } = useToast();
   const [slot, setSlot] = useState<Slot | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -55,23 +56,11 @@ export default function SlotDetailsPage({ params }: { params: Promise<{ id: stri
   useEffect(() => {
     const fetchSlot = async () => {
       try {
-        const token = localStorage.getItem('accessToken');
-        if (!token) {
-          throw new Error('No authentication token found. Please log in again.');
-        }
-
-        const response = await fetch(`/api/slots/${id}`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+        const response = await secureFetch(`/api/slots/${id}`, {
+          credentials: 'include',
         });
 
         if (!response.ok) {
-          if (response.status === 401) {
-            localStorage.removeItem('accessToken');
-            router.push('/auth/login');
-            return;
-          }
           const errorData = await response.json().catch(() => ({}));
           throw new Error(
             errorData.error?.message || `Failed to fetch slot details (${response.status})`
@@ -104,7 +93,7 @@ export default function SlotDetailsPage({ params }: { params: Promise<{ id: stri
   }, [startTime, endTime, slot]);
 
   const onSubmit = async (values: BookingFormValues) => {
-    if (!token) {
+    if (!user) {
       toastError('Please log in to book a slot.');
       router.push('/auth/login');
       return;
@@ -113,28 +102,27 @@ export default function SlotDetailsPage({ params }: { params: Promise<{ id: stri
       const startIso = new Date(values.startTime).toISOString();
       const endIso = new Date(values.endTime).toISOString();
 
-      const response = await fetch('/api/bookings', {
+      const response = await secureFetch('/api/bookings', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           slotId: id,
           startTime: startIso,
           endTime: endIso,
         }),
+        credentials: 'include',
       });
 
       const data = await response.json();
       if (!response.ok) {
         throw new Error(data.error?.message || 'Failed to create booking');
       }
-
       success('Booking created successfully!');
       router.push('/bookings');
     } catch (err) {
-      toastError(err instanceof Error ? err.message : 'Failed to create booking');
+      toastError(err instanceof Error ? err.message : 'An error occurred');
     }
   };
 

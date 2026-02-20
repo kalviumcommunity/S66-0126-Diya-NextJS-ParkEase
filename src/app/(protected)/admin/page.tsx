@@ -3,6 +3,8 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useToast } from '@/context/ToastContext';
+import { useAuth } from '@/context/AuthContext';
+import { secureFetch } from '@/lib/secureFetch';
 import Modal from '@/components/ui/Modal';
 
 interface Slot {
@@ -16,6 +18,7 @@ interface Slot {
 export default function AdminPage() {
   const router = useRouter();
   const { success, error: toastError } = useToast();
+  const { user, isLoading: authLoading } = useAuth();
   const [slots, setSlots] = useState<Slot[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -26,30 +29,22 @@ export default function AdminPage() {
   );
 
   useEffect(() => {
-    const token = localStorage.getItem('accessToken');
-    if (!token) {
+    if (authLoading) return;
+
+    if (!user) {
       router.push('/auth/login');
       return;
     }
 
-    try {
-      const payload = JSON.parse(atob(token.split('.')[1]));
-
-      if (payload.role !== 'ADMIN') {
-        router.push('/');
-        return;
-      }
-    } catch {
-      router.push('/auth/login');
+    if (user.role !== 'ADMIN') {
+      router.push('/');
       return;
     }
 
     const fetchSlots = async () => {
       try {
-        const response = await fetch('/api/slots', {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+        const response = await secureFetch('/api/slots', {
+          credentials: 'include',
         });
 
         if (!response.ok) throw new Error('Failed to fetch slots');
@@ -63,23 +58,23 @@ export default function AdminPage() {
     };
 
     fetchSlots();
-  }, [router]);
+  }, [authLoading, user, router]);
 
   const handleUpdateSlot = async () => {
     if (!selectedSlot) return;
 
     setIsUpdating(true);
     try {
-      const response = await fetch('/api/admin/slots', {
+      const response = await secureFetch('/api/admin/slots', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
         },
         body: JSON.stringify({
           slotId: selectedSlot.id,
           status: updateStatus,
         }),
+        credentials: 'include',
       });
 
       if (!response.ok) throw new Error('Failed to update slot');

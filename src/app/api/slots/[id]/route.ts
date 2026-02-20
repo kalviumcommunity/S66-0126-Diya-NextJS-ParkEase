@@ -1,8 +1,7 @@
 import { NextRequest } from 'next/server';
-import jwt from 'jsonwebtoken';
 import { successResponse, errorResponse } from '@/lib/apiResponse';
 import { prisma } from '@/lib/prisma';
-import { AuthUser } from '@/lib/auth';
+import { completeExpiredBookings, markActiveBookingsAsOccupied } from '@/lib/bookingService';
 
 /**
  * GET /api/slots/[id]
@@ -13,24 +12,8 @@ import { AuthUser } from '@/lib/auth';
  */
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    // Authenticate the request
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return errorResponse('Unauthorized', 401);
-    }
-
-    const token = authHeader.substring(7);
-    const jwtSecret = process.env.JWT_SECRET;
-    if (!jwtSecret) {
-      return errorResponse('Internal server error', 500);
-    }
-
-    try {
-      jwt.verify(token, jwtSecret) as AuthUser;
-    } catch (tokenErr) {
-      console.error('Token verification error:', tokenErr);
-      return errorResponse('Unauthorized', 401);
-    }
+    await completeExpiredBookings();
+    await markActiveBookingsAsOccupied();
 
     const { id: slotId } = await params;
 

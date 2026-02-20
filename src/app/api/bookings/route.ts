@@ -1,5 +1,10 @@
 import { successResponse, errorResponse } from '@/lib/apiResponse';
-import { bookParkingSlot, isSlotAvailable } from '@/lib/bookingService';
+import {
+  bookParkingSlot,
+  isSlotAvailable,
+  completeExpiredBookings,
+  markActiveBookingsAsOccupied,
+} from '@/lib/bookingService';
 import { createBookingSchema } from '@/lib/validations/booking';
 import { invalidateCachePattern } from '@/lib/redis';
 import { sendEmail, getBookingConfirmationEmailHtml } from '@/lib/email';
@@ -99,6 +104,10 @@ export async function POST(request: AuthenticatedRequest) {
 export async function GET(request: AuthenticatedRequest) {
   return authenticate(async (authRequest: AuthenticatedRequest) => {
     try {
+      // First, sync booking/slot statuses
+      await completeExpiredBookings();
+      await markActiveBookingsAsOccupied();
+
       const searchParams = authRequest.nextUrl.searchParams;
       const slotId = searchParams.get('slotId');
       const startTime = searchParams.get('startTime');
