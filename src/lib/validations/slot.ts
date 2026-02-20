@@ -6,10 +6,8 @@ import { SlotStatus } from '@prisma/client';
  */
 export const updateSlotSchema = z.object({
   slotId: z.string().uuid('Invalid slot ID'),
-  status: z.nativeEnum(SlotStatus, {
-    errorMap: () => ({
-      message: 'Invalid status. Must be one of: AVAILABLE, OCCUPIED, RESERVED, MAINTENANCE',
-    }),
+  status: z.enum([SlotStatus.AVAILABLE, SlotStatus.OCCUPIED, SlotStatus.RESERVED, SlotStatus.MAINTENANCE], {
+    message: 'Invalid status. Must be one of: AVAILABLE, OCCUPIED, RESERVED, MAINTENANCE',
   }),
 });
 

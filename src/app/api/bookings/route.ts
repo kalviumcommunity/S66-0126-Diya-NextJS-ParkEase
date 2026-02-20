@@ -149,7 +149,6 @@ export async function GET(request: AuthenticatedRequest) {
               startTime: b.startTime.toISOString(),
               endTime: b.endTime.toISOString(),
               status: b.status,
-              totalPrice: b.totalPrice,
               createdAt: b.createdAt.toISOString(),
             })),
             total: bookings.length,

@@ -45,14 +45,20 @@ export function errorResponse(
   code?: string,
   details?: unknown
 ): NextResponse<ApiResponse> {
+  const errorObj: any = {
+    message,
+  };
+  if (code) {
+    errorObj.code = code;
+  }
+  if (details) {
+    errorObj.details = details;
+  }
+
   return NextResponse.json(
     {
       success: false,
-      error: {
-        message,
-        ...(code && { code }),
-        ...(details && { details }),
-      },
+      error: errorObj,
     },
     { status: statusCode }
   );
@@ -104,7 +110,7 @@ export function paginatedResponse<T>(
  */
 export async function handleAsync<T>(
   fn: () => Promise<{ success: boolean; data?: T; error?: string }>
-): Promise<NextResponse<ApiResponse<T>>> {
+): Promise<NextResponse<ApiResponse<any>>> {
   try {
     const result = await fn();
 

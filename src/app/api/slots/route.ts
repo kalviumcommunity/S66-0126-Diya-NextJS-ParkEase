@@ -35,9 +35,9 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
     cacheKey,
     async () => {
       // Build where clause for filters
-      const where: { status?: string; row?: number; column?: number } = {};
+      const where: Record<string, any> = {};
       if (status) {
-        where.status = status;
+        where.status = status as any;
       }
       if (row) {
         where.row = parseInt(row);

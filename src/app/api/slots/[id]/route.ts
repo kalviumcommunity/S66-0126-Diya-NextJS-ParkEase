@@ -10,7 +10,7 @@ import { completeExpiredBookings, markActiveBookingsAsOccupied } from '@/lib/boo
  * Path parameters:
  * - id: Slot ID (UUID)
  */
-export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     await completeExpiredBookings();
     await markActiveBookingsAsOccupied();

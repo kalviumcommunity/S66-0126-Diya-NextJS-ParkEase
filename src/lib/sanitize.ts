@@ -1,6 +1,6 @@
 import xss from 'xss';
 
-const DEFAULT_OPTIONS: xss.IWhiteList = {};
+const DEFAULT_OPTIONS: any = {};
 
 export function sanitizeString(input: string | null | undefined): string {
   if (!input) return '';

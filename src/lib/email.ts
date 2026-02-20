@@ -66,8 +66,15 @@ export async function sendEmail(
  */
 async function sendViaSendGrid(options: EmailOptions): Promise<SendEmailResult> {
   try {
-    const sgMail = await import('@sendgrid/mail');
-    const sgMailClient = sgMail.default;
+    let sgMailClient: any;
+    try {
+      // @ts-expect-error - optional dependency
+      const sgMail = await import('@sendgrid/mail');
+      sgMailClient = sgMail.default;
+    } catch {
+      // SendGrid not installed, fall through to console logging
+      throw new Error('SendGrid module not available');
+    }
 
     if (!process.env.SENDGRID_API_KEY) {
       throw new Error('SENDGRID_API_KEY environment variable not set');
@@ -100,6 +107,7 @@ async function sendViaSendGrid(options: EmailOptions): Promise<SendEmailResult> 
  */
 async function sendViaSES(options: EmailOptions): Promise<SendEmailResult> {
   try {
+    // @ts-expect-error - optional dependency
     const { SESClient, SendEmailCommand } = await import('@aws-sdk/client-ses');
 
     if (!process.env.AWS_ACCESS_KEY_ID || !process.env.AWS_SECRET_ACCESS_KEY) {
