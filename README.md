@@ -1,461 +1,510 @@
-# ParkEase - Smart Parking Management System
+# ParkEase - Crowd-Sourced Parking Optimization Platform
 
-A modern, full-stack parking management platform built with Next.js, TypeScript, Tailwind CSS, PostgreSQL, and Redis. ParkEase solves parking discovery chaos in crowded cities through real-time crowd-sourced data and intelligent slot booking.
+## 📋 Project Overview
 
-## Table of Contents
-- [Prerequisites](#prerequisites)
-- [Project Setup](#project-setup)
-- [Docker Setup](#docker-setup)
-- [Environment Variables](#environment-variables)
-- [Development](#development)
-- [Project Structure](#project-structure)
-- [Code Quality](#code-quality)
-- [Testing](#testing)
-- [Deployment](#deployment)
-- [Documentation](#documentation)
+ParkEase is a digital platform designed to solve the problem of chaotic parking discovery in crowded Indian cities. The system enables drivers to view real-time availability of parking slots in a public parking area, book slots in advance, and contribute crowd-sourced occupancy updates. The platform transforms a small rectangular public parking area, subdivided into individual slots, into an intelligent, user-managed ecosystem.
 
-## Prerequisites
+### Problem Statement
+In crowded Indian cities, parking space discovery remains chaotic. Drivers waste time circling for spots, leading to congestion, fuel waste, and frustration. Existing parking systems lack real-time visibility, user-friendly booking mechanisms, and community-driven updates.
 
-- **Node.js**: >= 20.9.0 (currently using 18.18.0 - upgrade recommended)
-- **npm**: >= 10.9.0
-- **PostgreSQL**: 14+ (for local development or Docker)
-- **Redis**: 6+ (for caching and sessions)
-- **Git**: For version control
-
-### Optional
-- **Docker & Docker Compose**: For containerized local development
-- **AWS Account**: For S3, SES, and deployment to ECS
-- **SendGrid Account**: For transactional emails
-
-## Project Setup
-
-### 1. Clone and Install Dependencies
-
-```bash
-git clone <repository-url>
-cd parkease
-npm install
-```
-
-## Docker Setup
-
-### Quick Start with Docker
-
-Run the entire stack (Next.js app, PostgreSQL, Redis) with one command:
-
-```bash
-# Start all services
-docker-compose up -d
-
-# Verify services are running
-docker-compose ps
-
-# View logs
-docker-compose logs -f app
-```
-
-**Access the app**: http://localhost:3000
-
-### Services
-
-- **App** (Next.js): http://localhost:3000
-- **Database** (PostgreSQL): localhost:5432
-- **Cache** (Redis): localhost:6379
-
-### Docker Environment
-
-```bash
-# Copy Docker environment template
-cp .env.docker .env.docker.local
-
-# Edit environment (optional, defaults are configured)
-nano .env.docker.local
-```
-
-### Common Docker Commands
-
-```bash
-# Start services
-docker-compose up -d
-
-# Stop services
-docker-compose stop
-
-# Stop and remove containers (keep data)
-docker-compose down
-
-# Stop and remove everything including volumes
-docker-compose down -v
-
-# View logs
-docker-compose logs -f
-
-# Access database
-docker-compose exec db psql -U parkease -d parkease_dev
-
-# Access Redis CLI
-docker-compose exec redis redis-cli
-
-# Run npm commands in container
-docker-compose exec app npm run build
-docker-compose exec app npm run lint
-```
-
-**See [DOCKER_SETUP.md](./DOCKER_SETUP.md) for comprehensive Docker guide**
-
-## Environment Variables
-
-### Step 1: Create Local Environment File
-
-```bash
-cp .env.example .env.local
-```
-
-### Step 2: Configure .env.local
-
-Edit `.env.local` and fill in the required values:
-
-```env
-# Database
-DATABASE_URL=postgresql://user:password@localhost:5432/parkease_dev
-
-# Redis
-REDIS_URL=redis://localhost:6379
-
-# JWT Secrets (generate with: openssl rand -base64 32)
-JWT_SECRET=your_32_char_minimum_secret_key_here
-JWT_REFRESH_SECRET=your_refresh_secret_key_min_32_chars
-
-# AWS S3 (for file uploads)
-AWS_REGION=ap-south-1
-AWS_ACCESS_KEY_ID=your_key_id
-AWS_SECRET_ACCESS_KEY=your_secret_key
-AWS_S3_BUCKET=parkease-dev-bucket
-
-# Email Service
-EMAIL_PROVIDER=sendgrid
-SENDGRID_API_KEY=your_sendgrid_api_key
-
-# Application
-NEXT_PUBLIC_APP_URL=http://localhost:3000
-NODE_ENV=development
-```
-
-### Environment Variable Guidelines
-
-#### Client-Side Variables (Exposed to Browser)
-Only variables prefixed with `NEXT_PUBLIC_` are exposed to the client:
-
-```env
-NEXT_PUBLIC_APP_URL=http://localhost:3000
-NEXT_PUBLIC_API_TIMEOUT=5000
-```
-
-**✓ Safe to expose** (non-sensitive, client-facing URLs/configs)
-**✗ Never expose** (secrets, API keys, database credentials)
-
-#### Server-Side Variables (Node.js Runtime Only)
-All variables are available on the server without the `NEXT_PUBLIC_` prefix:
-
-```env
-DATABASE_URL          # ✓ Server-side only
-JWT_SECRET           # ✓ Server-side only
-AWS_SECRET_ACCESS_KEY # ✓ Server-side only
-```
-
-#### Security Best Practices
-
-1. **Never commit `.env.local`** - It's in `.gitignore`
-2. **Use `.env.example`** - Template for team reference
-3. **Rotate secrets regularly** - Especially `JWT_SECRET`
-4. **Use strong secrets** - Minimum 32 characters for cryptographic keys:
-   ```bash
-   # Generate secure secrets
-   openssl rand -base64 32
-   ```
-5. **Store secrets in CI/CD** - Use GitHub Actions Secrets, AWS Secrets Manager
-6. **Validate environment variables** - Server startup should fail if required vars missing
-
-#### Accessing Environment Variables in Code
-
-**Server-side (Next.js API routes, getServerSideProps):**
-```typescript
-const dbUrl = process.env.DATABASE_URL; // ✓ Available
-
-function handler(req: NextApiRequest, res: NextApiResponse) {
-  const jwtSecret = process.env.JWT_SECRET; // ✓ Available
-  // ...
-}
-```
-
-**Client-side (React components):**
-```typescript
-// src/components/Layout.tsx
-export function Layout() {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL; // ✓ Available
-  const secret = process.env.JWT_SECRET; // ✗ Undefined
-}
-```
-
-**Accessing in Next.js config:**
-```typescript
-// next.config.ts
-const nextConfig: NextConfig = {
-  env: {
-    DATABASE_URL: process.env.DATABASE_URL, // ✓ Build-time
-  },
-};
-```
-
-## Development
-
-### Start Development Server
-
-```bash
-npm run dev
-```
-
-Open [http://localhost:3000](http://localhost:3000) in your browser.
-
-### Available Scripts
-
-```bash
-# Development
-npm run dev              # Start dev server with hot reload
-
-# Building
-npm run build            # Build for production
-npm start               # Start production server
-
-# Code Quality
-npm run lint            # Check for linting errors
-npm run lint:fix        # Auto-fix linting errors
-npm run format          # Format code with Prettier
-npm run format:check    # Check formatting without changes
-
-# Type Checking
-npm run type-check      # Run TypeScript compiler check
-```
-
-### Development Workflow
-
-1. **Create feature branch**: `git checkout -b feature/feature-name`
-2. **Write code** with TypeScript strict mode enabled
-3. **Format on save**: VS Code auto-formats via Prettier
-4. **Pre-commit checks**: Husky runs ESLint and Prettier on staged files
-5. **Commit**: `git commit -m "feat: describe changes"`
-
-### Pre-commit Hooks
-
-Husky automatically runs on `git commit`:
-- **ESLint** checks TypeScript syntax and rules
-- **Prettier** formats code consistently
-- Prevents commits with formatting or linting issues
-
-To skip (not recommended): `git commit --no-verify`
-
-## Project Structure
-
-```
-src/
-├── app/                    # Next.js App Router
-│   ├── api/               # API routes
-│   ├── auth/              # Auth pages
-│   ├── map/               # Parking map pages
-│   ├── bookings/          # Booking pages
-│   ├── admin/             # Admin dashboard
-│   ├── layout.tsx         # Root layout
-│   ├── page.tsx           # Home page
-│   └── globals.css        # Global styles
-│
-├── components/             # Reusable UI components
-│   ├── Header.tsx
-│   ├── Footer.tsx
-│   ├── ParkingGrid.tsx
-│   └── ui/                # UI primitives
-│
-├── lib/                    # Utilities & helpers
-│   ├── db.ts             # Prisma client
-│   ├── auth.ts           # Auth utilities
-│   ├── validators.ts     # Zod schemas
-│   └── utils.ts          # Helper functions
-│
-├── hooks/                  # Custom React hooks
-├── context/                # React context providers
-└── types/                  # TypeScript definitions
-
-public/                     # Static assets
-```
-
-See [FOLDER_STRUCTURE.md](./FOLDER_STRUCTURE.md) for detailed organization.
-
-## Code Quality
-
-### TypeScript Strict Mode
-All TypeScript files enforce:
-- ✓ `strict: true` - All strict type checks
-- ✓ `noUnusedLocals: true` - No unused variables
-- ✓ `noImplicitReturns: true` - All code paths return
-
-### Linting with ESLint
-- Enforces code style consistency
-- Detects potential bugs
-- Integrates with VS Code
-
-```bash
-npm run lint      # Check errors
-npm run lint:fix  # Auto-fix errors
-```
-
-### Code Formatting with Prettier
-- Consistent code style across team
-- 100-character line width
-- Single quotes, semicolons, 2-space indentation
-
-```bash
-npm run format     # Format all files
-npm run format:check  # Check without changes
-```
-
-### IDE Setup (VS Code)
-
-1. Install extensions:
-   - [ESLint](https://marketplace.visualstudio.com/items?itemName=dbaeumer.vscode-eslint)
-   - [Prettier](https://marketplace.visualstudio.com/items?itemName=esbenp.prettier-vscode)
-
-2. Settings auto-configured via `.vscode/settings.json`:
-   - Format on save: Enabled
-   - Auto-fix on save: Enabled
-
-See [CODE_QUALITY.md](./CODE_QUALITY.md) for detailed configuration.
-
-## Testing
-
-```bash
-# Unit tests (when configured)
-npm run test
-
-# Test coverage
-npm run test:coverage
-
-# E2E tests (when configured)
-npm run test:e2e
-```
-
-## Deployment
-
-### Docker Build
-
-```bash
-docker build -t parkease:latest .
-docker run -p 3000:3000 --env-file .env.production parkease:latest
-```
-
-### Environment for Production
-
-1. Create `.env.production` with production values
-2. Use AWS Secrets Manager or similar for sensitive data
-3. Set environment variables in deployment platform (ECS, Azure App Service, etc.)
-
-### Cloud Deployment
-
-See [PROJECT_CONTEXT.md](../PROJECT_CONTEXT.md) for detailed deployment architecture.
-
-## Documentation
-
-- [**PROJECT_CONTEXT.md**](../PROJECT_CONTEXT.md) - Full project specification, architecture, API design
-- [**CODE_QUALITY.md**](./CODE_QUALITY.md) - TypeScript, ESLint, Prettier, Husky configuration
-- [**FOLDER_STRUCTURE.md**](./FOLDER_STRUCTURE.md) - Project directory organization
-
-## Common Issues
-
-### Port 3000 Already in Use
-```bash
-# Kill process on port 3000
-lsof -ti:3000 | xargs kill -9
-npm run dev
-```
-
-### Node Version Mismatch
-```bash
-# Upgrade Node.js
-nvm install 20.9.0
-nvm use 20.9.0
-```
-
-### Missing Environment Variables
-```bash
-# Check which vars are missing
-cat .env.local | grep "="
-# Compare with .env.example
-```
-
-### ESLint/Prettier Conflicts
-```bash
-npm run lint:fix
-npm run format
-```
-
-## Getting Help
-
-- Check [PROJECT_CONTEXT.md](../PROJECT_CONTEXT.md) for architecture questions
-- Review [CODE_QUALITY.md](./CODE_QUALITY.md) for linting/formatting issues
-- Review [CONTRIBUTING.md](./CONTRIBUTING.md) for GitHub workflow and branching
-- Check Next.js docs: https://nextjs.org/docs
-- TypeScript docs: https://www.typescriptlang.org/docs
-
-## GitHub Workflow
-
-### Branch Protection Rules
-The `main` branch is protected with:
-- ✓ Required pull request reviews (1 approval)
-- ✓ Required status checks (build, lint, type-check, format)
-- ✓ Linear history enforcement
-- ✓ Automatic tests on all PRs
-
-See [`.github/BRANCH_PROTECTION.md`](./.github/BRANCH_PROTECTION.md) for setup instructions.
-
-### Pull Request Process
-1. Create feature branch: `git checkout -b feature/your-feature`
-2. Commit with conventional commits: `feat: add new feature`
-3. Push and create PR using [`.github/PULL_REQUEST_TEMPLATE.md`](./.github/PULL_REQUEST_TEMPLATE.md)
-4. Automated checks run via GitHub Actions
-5. Request review from code owners
-6. Merge when approved and all checks pass
-
-See [**CONTRIBUTING.md**](./CONTRIBUTING.md) for detailed guidelines.
-
-### CI/CD Pipeline
-GitHub Actions runs on every PR and push to `main`:
-- **build**: `npm run build`
-- **lint**: `npm run lint`
-- **type-check**: `npm run type-check`
-- **format**: `npm run format:check`
-
-View workflows in [`.github/workflows/`](./.github/workflows/)
-
-## Documentation
-
-- [**PROJECT_CONTEXT.md**](./PROJECT_CONTEXT.md) - Architecture, features, API specs, database schema
-- [**CONTRIBUTING.md**](./CONTRIBUTING.md) - Git workflow, branch naming, commit guidelines
-- [**ENV_SETUP.md**](./ENV_SETUP.md) - Comprehensive environment variable setup guide
-- [**ENV_QUICK_REFERENCE.md**](./ENV_QUICK_REFERENCE.md) - Quick environment variable reference
-- [**CODE_QUALITY.md**](./CODE_QUALITY.md) - TypeScript, ESLint, Prettier, Husky configuration
-- [**FOLDER_STRUCTURE.md**](./FOLDER_STRUCTURE.md) - Project directory organization
-
-## License
-
-Proprietary - ParkEase Team
-
-## Contributing
-
-1. Create feature branch from `main`
-2. Follow code quality guidelines
-3. Ensure all tests pass
-4. Submit pull request
+### Solution
+ParkEase provides:
+- **Real-time parking slot visibility** through an interactive grid interface
+- **Authenticated booking system** for advance slot reservation
+- **Crowd-sourced availability updates** allowing users to report when they vacate or occupy slots
+- **Admin dashboard** for parking lot management and monitoring
 
 ---
 
-**Last Updated**: February 19, 2026
-**Node Version**: >= 20.9.0 (recommended)
-**Package Manager**: npm >= 10.9.0
+## 🎯 Target Users
+
+| User Type | Key Needs |
+|-----------|-----------|
+| **Drivers** | Find available slots quickly, book in advance, navigate to reserved slot, report status changes |
+| **Parking Administrators** | Manage slot inventory, monitor occupancy trends, handle maintenance, view reports |
+| **System Administrators** | Oversee platform operations, manage user accounts, handle disputes |
+
+---
+
+## ✨ Core Features
+
+### MVP Features
+1. **User Authentication**
+   - Email/password registration and login
+   - JWT-based session management with refresh tokens
+   - Role-based access (USER, ADMIN)
+
+2. **Interactive Parking Map**
+   - Visual grid representation of all parking slots
+   - Color-coded slot status (Available, Occupied, Reserved, Maintenance)
+   - Real-time availability updates
+   - Responsive design for mobile and desktop
+
+3. **Slot Booking**
+   - Select a slot and choose future time window
+   - Conflict prevention to avoid double-booking
+   - View and manage personal bookings
+   - Cancel bookings before start time
+
+4. **Crowd-Sourced Updates**
+   - Users can report leaving a slot (marks as available)
+   - Users can report an occupied slot
+   - Rate limiting to prevent abuse
+   - Aggregated reporting for status validation
+
+5. **Admin Dashboard**
+   - Manage all parking slots (add, edit, mark maintenance)
+   - View all bookings and user reports
+   - Generate occupancy reports
+   - Override slot status when needed
+
+6. **Email Notifications**
+   - Welcome email on registration
+   - Booking confirmation with slot and time details
+   - Reminder before upcoming bookings
+   - Cancellation confirmation
+
+---
+
+## 🏗️ System Architecture
+
+### High-Level Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                     Client Browser                          │
+│            Next.js App (React Components)                   │
+└─────────────────┬───────────────────────────────────────────┘
+                  │
+                  ▼
+┌─────────────────────────────────────────────────────────────┐
+│              Vercel (Next.js Application)                   │
+│  ┌──────────────────────────────────────────────────────┐  │
+│  │  App Router Pages (UI)    │   API Routes (Backend)  │  │
+│  └──────────────────────────────────────────────────────┘  │
+└─────────────┬──────────────────────────┬───────────────────┘
+              │                          │
+              ▼                          ▼
+┌─────────────────────────┐  ┌─────────────────────────────┐
+│     Supabase            │  │         Upstash             │
+│  (PostgreSQL + Auth)    │  │   (Redis/Vercel KV)        │
+│  - User data            │  │   - Slot availability cache│
+│  - Booking records      │  │   - Rate limiting          │
+│  - Slot inventory       │  │   - Session data           │
+│  - Real-time updates    │  └─────────────────────────────┘
+└─────────────────────────┘
+              │
+              ▼
+┌─────────────────────────────────────────────────────────────┐
+│                    External Services                        │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐    │
+│  │  Supabase    │  │  Resend/     │  │  Vercel      │    │
+│  │  Storage     │  │  SendGrid    │  │  Analytics   │    │
+│  │ (File Store) │  │ (Email)      │  │ (Monitoring) │    │
+│  └──────────────┘  └──────────────┘  └──────────────┘    │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Data Flow Scenarios
+
+**Viewing Parking Map:**
+1. User navigates to `/map`
+2. Client fetches slots via `GET /api/slots`
+3. API checks Vercel KV (Redis) cache for availability
+4. If cache miss, queries Supabase PostgreSQL and caches result
+5. Optional: Subscribe to Supabase real-time for live updates
+6. Rendered as interactive grid with real-time status colors
+
+**Booking a Slot:**
+1. User selects slot and time window on details page
+2. Form validation occurs client-side
+3. `POST /api/bookings` with slot ID and time range
+4. Server validates availability via Supabase transaction (row-level security)
+5. On success, creates booking record, updates slot status to RESERVED
+6. Sends confirmation email via Resend/SendGrid
+7. Invalidates Vercel KV cache for affected slot
+
+**Crowd-Sourced Update:**
+1. User clicks "I just left" button on occupied slot
+2. `POST /api/slots/{id}/report` with action=LEFT
+3. Server checks rate limiting via Vercel KV
+4. Updates slot status to AVAILABLE if sufficient consensus
+5. Records report for moderation
+6. Invalidates cache and triggers real-time update
+
+---
+
+## 🛠️ Technology Stack
+
+### Frontend
+| Technology | Purpose |
+|------------|---------|
+| **Next.js 14** (App Router) | Full-stack framework with server-side rendering and API routes |
+| **TypeScript** | Type safety and developer experience |
+| **Tailwind CSS** | Utility-first styling with responsive design |
+| **React Hook Form** | Form handling and validation |
+| **SWR** | Client-side data fetching with caching and revalidation |
+| **Zod** | Schema validation for forms and API inputs |
+
+### Backend & Database
+| Technology | Purpose |
+|------------|---------|
+| **Next.js API Routes** | RESTful API endpoints |
+| **Supabase** | PostgreSQL database with built-in auth, storage, and real-time |
+| **Prisma ORM** | Type-safe database client and migrations (optional) |
+| **Vercel KV** (Upstash Redis) | Caching, rate limiting, and session management |
+| **JWT** | Stateless authentication (access + refresh tokens) |
+| **bcrypt** | Password hashing (if using custom auth) |
+
+### Infrastructure & Deployment
+| Technology | Purpose |
+|------------|---------|
+| **Vercel** | Serverless deployment platform with edge network |
+| **Supabase** | Managed PostgreSQL, authentication, and storage |
+| **Vercel KV** | Serverless Redis for caching and rate limiting |
+| **Vercel Postgres** | Alternative managed PostgreSQL (if not using Supabase) |
+| **Vercel Blob** | File storage for user uploads |
+| **Resend / SendGrid** | Transactional email delivery |
+| **GitHub** | Version control and CI/CD |
+| **Vercel Analytics** | Performance monitoring and analytics |
+
+### Third-Party Services
+| Service | Purpose |
+|---------|---------|
+| **Supabase Auth** | Built-in authentication (optional alternative to custom JWT) |
+| **Supabase Storage** | File storage for user profile images |
+| **Supabase Realtime** | Live slot status updates |
+| **Resend** | Email delivery (better developer experience) |
+| **Upstash** | Redis provider for Vercel KV |
+
+---
+
+## 📊 Database Schema (Supabase PostgreSQL)
+
+### Core Tables
+
+| Table | Description | Key Columns |
+|-------|-------------|-------------|
+| **users** | Registered platform users | id (UUID), email, encrypted_password, name, role (USER/ADMIN) |
+| **parking_slots** | Individual parking spots | id, row, column, status (AVAILABLE/OCCUPIED/RESERVED/MAINTENANCE) |
+| **bookings** | Slot reservations | id, user_id, slot_id, start_time, end_time, status (PENDING/CONFIRMED/CANCELLED/COMPLETED) |
+| **crowd_reports** | User-submitted occupancy reports | id, user_id, slot_id, action (LEFT/OCCUPIED), created_at |
+
+### Row Level Security (RLS) Policies
+Supabase RLS ensures data security:
+- **Users**: Can read own profile, update own profile
+- **Parking slots**: Public read access, admin-only write access
+- **Bookings**: Users can CRUD own bookings, admins can read all
+- **Crowd reports**: Authenticated users can create reports, admins can read all
+
+### Indexes
+- `bookings.slot_id` - for availability checks
+- `bookings.start_time, end_time` - for conflict detection
+- `crowd_reports.slot_id, created_at` - for recent report aggregation
+- `users.email` - for fast login lookups
+
+### Real-time Subscriptions
+Supabase Realtime enables:
+- Live slot status updates across all connected clients
+- Booking conflict notifications
+- Admin dashboard live metrics
+
+---
+
+## 🔐 Security Architecture
+
+### Authentication
+Supabase Auth provides:
+- **Email/Password authentication** with built-in security
+- **JWT tokens** automatically managed and validated
+- **Session handling** with refresh tokens
+- **OAuth providers** (Google, GitHub) for social login (optional)
+
+### Authorization
+- **Row Level Security (RLS)** policies in Supabase
+- **Role-Based Access Control (RBAC)**
+  - `USER`: Can view slots, book, view own bookings, report status
+  - `ADMIN`: Full access plus slot management, user oversight, reporting
+
+### Data Protection
+- **Input Validation**: Zod schemas for all API inputs
+- **XSS Prevention**: Automatic sanitization of user-generated content
+- **SQL Injection**: Supabase parameterized queries
+- **Password Storage**: Supabase handles bcrypt hashing automatically
+- **HTTPS**: Enforced by Vercel with automatic SSL certificates
+
+### Security Headers
+Vercel automatically configures:
+- Content Security Policy (CSP)
+- Strict-Transport-Security (HSTS)
+- X-Content-Type-Options
+- X-Frame-Options
+
+---
+
+## 🚀 Deployment Architecture (Vercel + Supabase)
+
+### Environment Strategy
+- **Development**: Local Next.js + Supabase local development (Docker)
+- **Preview**: Vercel preview deployments for each PR
+- **Production**: Vercel production branch with Supabase production project
+
+### Vercel Features
+| Feature | Usage |
+|---------|-------|
+| **Edge Network** | Global CDN for faster asset delivery |
+| **Serverless Functions** | API routes scale automatically |
+| **Preview Deployments** | Automatic preview for each PR |
+| **Environment Variables** | Secure secret management |
+| **Analytics** | Core Web Vitals and performance monitoring |
+| **Log Drains** | Centralized logging |
+
+### Supabase Configuration
+| Component | Configuration |
+|-----------|--------------|
+| **Database** | PostgreSQL with automatic backups and point-in-time recovery |
+| **Auth** | Built-in authentication with email templates |
+| **Storage** | S3-compatible storage for user uploads |
+| **Realtime** | WebSocket connections for live updates |
+| **Edge Functions** | Optional serverless functions (if needed) |
+
+### CI/CD Pipeline (GitHub + Vercel)
+
+1. **On Pull Request**:
+   - Vercel creates preview deployment
+   - Run TypeScript type checking
+   - Execute ESLint
+   - Run unit and integration tests
+   - Comment preview URL on PR
+
+2. **On Merge to Main**:
+   - Vercel automatically deploys to production
+   - Run database migrations (if using Prisma)
+   - Invalidate cache
+   - Deploy to production domain
+
+3. **Rollback Strategy**:
+   - Instant rollback via Vercel dashboard
+   - Previous deployment instantly available
+   - Database migrations must be backward-compatible
+
+---
+
+## 📈 Performance Optimization
+
+### Caching Strategy
+- **Vercel KV (Redis)** for slot availability with 30-second TTL
+- **Vercel Edge Cache** for static assets
+- **SWR** client-side caching with revalidation
+- **Supabase Realtime** for live updates without polling
+
+### Database Optimization
+- Supabase automatically handles connection pooling
+- Strategic indexes on frequently queried columns
+- Query optimization through Supabase EXPLAIN ANALYZE
+- Materialized views for complex reports
+
+### Frontend Performance
+- **Automatic code splitting**: Via Next.js
+- **Image optimization**: Next.js Image component with Vercel image optimization
+- **Static generation**: Pre-render public pages
+- **Edge Functions**: Run API logic closer to users
+
+---
+
+## 📝 API Documentation
+
+### Authentication (Supabase Auth)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/auth/signup` | Register new user (wraps Supabase Auth) |
+| POST | `/api/auth/login` | Login via Supabase Auth |
+| POST | `/api/auth/logout` | Logout and clear session |
+| GET | `/api/auth/session` | Get current session |
+
+### Parking Slot Endpoints
+
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| GET | `/api/slots` | List all slots with status | Yes |
+| GET | `/api/slots/{id}` | Get slot details | Yes |
+| PUT | `/api/slots/{id}` | Update slot status | Admin only |
+| POST | `/api/slots/{id}/report` | Report slot status change | Yes |
+
+### Booking Endpoints
+
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| GET | `/api/bookings` | Get user's bookings | Yes |
+| POST | `/api/bookings` | Create new booking | Yes |
+| GET | `/api/bookings/{id}` | Get booking details | Yes |
+| DELETE | `/api/bookings/{id}` | Cancel booking | Yes |
+
+### Admin Endpoints
+
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| GET | `/api/admin/stats` | Get platform statistics | Admin only |
+| PUT | `/api/admin/slots` | Batch update slots | Admin only |
+| GET | `/api/admin/reports` | Get crowd reports | Admin only |
+
+---
+
+## 📱 User Interface
+
+### Pages Structure
+
+| Route | Page | Description | Auth |
+|-------|------|-------------|------|
+| `/` | Landing | Introduction and call to action | No |
+| `/login` | Login | User authentication | No |
+| `/signup` | Signup | New user registration | No |
+| `/map` | Parking Map | Interactive slot grid | Yes |
+| `/slots/[id]` | Slot Details | Slot info and booking form | Yes |
+| `/bookings` | My Bookings | View/manage reservations | Yes |
+| `/admin` | Admin Dashboard | Slot and user management | Admin only |
+| `/profile` | Profile | User settings and preferences | Yes |
+
+### Key UI Components
+- **ParkingGrid**: Interactive grid showing all slots with status indicators
+- **SlotCard**: Individual slot details with quick actions
+- **BookingForm**: Date/time picker with validation
+- **ToastNotifications**: System feedback messages
+- **Modal**: Confirmations and forms
+- **LoadingSkeleton**: Placeholder for async content
+
+### Responsive Breakpoints
+- **Mobile**: < 768px (2-column slot grid)
+- **Tablet**: 768px - 1024px (3-column grid)
+- **Desktop**: > 1024px (5-column grid)
+
+---
+
+## 🔍 Monitoring & Observability
+
+### Vercel Analytics
+- **Core Web Vitals**: LCP, FID, CLS metrics
+- **Page views and user sessions**
+- **API function performance**
+- **Error tracking and debugging**
+
+### Supabase Monitoring
+- **Database performance metrics**
+- **Auth usage statistics**
+- **Storage usage**
+- **Real-time connection count**
+- **Query performance insights**
+
+### Logging
+- Vercel Log Drains for centralized logging
+- Supabase audit logs for database operations
+- Structured logging with console (development) and log drains (production)
+
+### Alerts
+- Vercel deployment failure notifications
+- High error rate alerts (via custom monitoring)
+- Supabase database CPU/memory thresholds
+
+---
+
+## 📋 Crowd-Sourcing Logic
+
+### Report Aggregation
+- Multiple reports required for status change (configurable)
+- Time-weighted recency for reports
+- Admin override capability for disputed reports
+
+### Abuse Prevention
+- **Vercel KV** for rate limiting: 5 reports per user per hour
+- Cooldown: Users can't report same slot within 10 minutes
+- Reputation scoring based on report accuracy
+- Flagged users require manual admin verification
+
+### Report Validation
+- Cross-reference with active bookings
+- Timestamp validation (reports must be within reasonable timeframe)
+- Geofencing to ensure reporter is near the location (future enhancement)
+
+---
+
+## 🔮 Future Enhancements
+
+1. **Real-time Updates**
+   - Supabase Realtime for live slot status changes
+   - Push notifications via web push API
+
+2. **Payment Integration**
+   - Razorpay/PayTM for advance payments
+   - Hourly/daily pricing models
+   - Refund processing for cancellations
+
+3. **Mobile Application**
+   - PWA capabilities for mobile web
+   - GPS-based parking suggestions
+   - Turn-by-turn navigation to reserved slot
+
+4. **Advanced Analytics**
+   - Predictive availability based on historical data
+   - Demand forecasting
+   - Dynamic pricing based on occupancy
+
+5. **Integration Capabilities**
+   - Government parking authority APIs
+   - IoT sensor integration for automated occupancy detection
+   - Google Maps/Waze integration
+
+6. **User Experience Enhancements**
+   - Favorite slots and quick booking
+   - Parking history and receipts
+   - Multi-language support (regional Indian languages)
+
+---
+
+## 📄 Environment Variables
+
+### Required Environment Variables
+
+| Variable | Description | Source |
+|----------|-------------|--------|
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL | Supabase Dashboard |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anonymous key | Supabase Dashboard |
+| `SUPABASE_SERVICE_ROLE_KEY` | Service role key (admin operations) | Supabase Dashboard |
+| `JWT_SECRET` | Secret for JWT tokens | Generate via `openssl rand -base64 32` |
+| `RESEND_API_KEY` | Email service API key | Resend Dashboard |
+| `KV_REST_API_URL` | Vercel KV REST API URL | Vercel Dashboard |
+| `KV_REST_API_TOKEN` | Vercel KV API token | Vercel Dashboard |
+
+### Optional Variables
+| Variable | Purpose |
+|----------|---------|
+| `NEXT_PUBLIC_APP_URL` | Application URL for email links |
+| `RATE_LIMIT_REQUESTS` | Requests per time window (default: 5) |
+| `RATE_LIMIT_WINDOW_MS` | Time window in ms (default: 3600000) |
+
+---
+
+## 🚀 Local Development Setup
+
+### Prerequisites
+- Node.js 18+
+- Git
+- Supabase CLI (for local database)
+- Vercel CLI (optional)
+
+### Installation Steps
+1. Clone the repository
+2. Install dependencies: `npm install`
+3. Copy `.env.example` to `.env.local` and fill in variables
+4. Start Supabase locally: `supabase start`
+5. Run database migrations: `supabase db reset`
+6. Start development server: `npm run dev`
+7. Open `http://localhost:3000`
+
+---
+
+## 📄 License
+
+This project is proprietary and confidential. All rights reserved.
+
+---
